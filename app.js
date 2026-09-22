@@ -46,7 +46,11 @@ function ago(v){const ts=new Date(v).getTime();const s=Math.max(0,Math.floor((Da
 function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),1900)}
 function initials(name='?'){return name.trim().split(/\s+/).slice(0,2).map(x=>x[0]?.toUpperCase()).join('') || '?'}
 function todayKey(){return new Date().toISOString().slice(0,10)}
-function requireAuth(){if(session)return true;openAuth();toast('Sign in to affect the Leptiverse');return false}
+function requireAuth(){
+  if(!session){openAuth();toast('Sign in to affect the Leptiverse');return false}
+  if(!profile?.username_set){openUsername();toast('Choose a username first');return false}
+  return true;
+}
 function banner(text){const b=$('#systemBanner');if(!text){b.classList.add('hidden');return}b.textContent=text;b.classList.remove('hidden')}
 
 function analyse(text){
@@ -83,6 +87,7 @@ async function hydrate(){
     if(session){
       const {data:p,error}=await supabase.from('profiles').select('*').eq('id',session.user.id).single();
       if(error) throw error;profile=p;
+      if(!profile.username_set) openUsername();
       const [{data:votes},{data:dv}] = await Promise.all([
         supabase.from('meaning_votes').select('meaning_id').eq('user_id',session.user.id),
         supabase.from('daily_votes').select('daily_entry_id').eq('user_id',session.user.id)
@@ -123,7 +128,7 @@ async function loadMeanings(){
   meanings=rows.length
     ? rows.map(x=>{
         const p=profileMap.get(x.user_id);
-        return {...x,author:p?.display_name||p?.username||'Leptigo User'};
+        return {...x,author:p?.username||'Leptigo User'};
       })
     : [...seedMeanings];
 }
@@ -142,7 +147,7 @@ async function loadDaily(){
   const profileMap=await loadProfileMap(rows.map(x=>x.user_id));
   dailyEntries=rows.map(x=>{
     const p=profileMap.get(x.user_id);
-    return {...x,author:p?.display_name||p?.username||'Leptigo User'};
+    return {...x,author:p?.username||'Leptigo User'};
   });
 }
 
@@ -154,7 +159,9 @@ function navigateFromHash(){const v=location.hash.slice(1);navigate(['feed','def
 
 function renderAll(){renderAccount();renderFeed();renderDaily();renderDictionary();renderTrending();renderStats();renderProfile();}
 function renderAccount(){
-  const name=profile?.display_name||profile?.username||(session?.user?.email?.split('@')[0])||'Sign in';const av=initials(name);
+  const ready=!!profile?.username_set;
+  const name=ready ? profile.username : (session ? 'Choose username' : 'Sign in');
+  const av=ready ? initials(profile.username) : (session ? '?' : 'SI');
   $('#navName').textContent=name;$('#navAvatar').textContent=av;$('#feedAvatar').textContent=av;$('#navRep').textContent=profile?.rep||0;
   $('#signedOutPanel').classList.toggle('hidden',!!session);$('#signedInPanel').classList.toggle('hidden',!session);$('#signOutBtn').classList.toggle('hidden',!session);
 }
@@ -190,9 +197,66 @@ function renderTrending(){$('#trendingList').innerHTML=[...meanings].sort((a,b)=
 function renderStats(){const mine=meanings.filter(x=>x.user_id===session?.user?.id).length;$('#statMeanings').textContent=mine;$('#statVotes').textContent=votedMeaningIds.size;$('#statStreak').textContent=1;$('#statRep').textContent=profile?.rep||0;$('#globalMeaningCount').textContent=meanings.length.toLocaleString();}
 function renderProfile(){
   if(!session){$('#profileMeanings').innerHTML='<div class="empty-state">Sign in to build your Leptigo history.</div>';return}
-  const name=profile?.display_name||profile?.username||'Leptigo User',rep=profile?.rep||0,level=Math.floor(rep/100)+1,xp=rep%100,names=['Context Casualty','Meaning Dealer','Semantic Menace','Lexical Anomaly','Leptigo Entity'];
-  $('#profileName').textContent=name;$('#profileHandle').textContent='@'+(profile?.username||'leptigo');$('#profileAvatar').textContent=initials(name);$('#profileRep').textContent=rep;$('#profileXp').style.width=xp+'%';$('#levelText').textContent=`Level ${level} · ${names[Math.min(level-1,names.length-1)]}`;
+  const name=profile?.username_set?profile.username:'Choose username',rep=profile?.rep||0,level=Math.floor(rep/100)+1,xp=rep%100,names=['Context Casualty','Meaning Dealer','Semantic Menace','Lexical Anomaly','Leptigo Entity'];
+  $('#profileName').textContent=name;$('#profileHandle').textContent=profile?.username_set?'@'+profile.username:'Username required';$('#profileAvatar').textContent=initials(name);$('#profileRep').textContent=rep;$('#profileXp').style.width=xp+'%';$('#levelText').textContent=`Level ${level} · ${names[Math.min(level-1,names.length-1)]}`;
   const mine=meanings.filter(x=>x.user_id===session.user.id);$('#profileMeanings').innerHTML=mine.map(x=>`<div class="definition-item"><p class="definition-text">${esc(x.definition)}</p><div class="definition-meta"><span>${esc(x.part)} · ${esc(x.tone)}</span><span>▲ ${x.vote_count||0}</span></div></div>`).join('')||'<div class="empty-state">You have not unleashed a public meaning yet.</div>';
+}
+
+function normaliseUsername(value=''){
+  return value.trim().replace(/^@+/,'').toLowerCase();
+}
+
+function openUsername(){
+  if(!session || profile?.username_set)return;
+  $('#usernameModal')?.classList.remove('hidden');
+  setTimeout(()=>$('#usernameInput')?.focus(),50);
+}
+
+async function claimUsername(){
+  if(!session)return;
+  const input=$('#usernameInput');
+  const note=$('#usernameNote');
+  const btn=$('#saveUsernameBtn');
+  const username=normaliseUsername(input?.value||'');
+
+  if(!/^[a-z0-9_]{3,24}$/.test(username)){
+    note.textContent='Use 3–24 letters, numbers or underscores.';
+    return;
+  }
+
+  const reserved=new Set(['admin','administrator','moderator','mod','support','official','system','leptigo','leptigohq']);
+  if(reserved.has(username)){
+    note.textContent='That username is reserved.';
+    return;
+  }
+
+  btn.disabled=true;
+  note.textContent='Claiming @'+username+'…';
+
+  const {data,error}=await supabase
+    .from('profiles')
+    .update({username,display_name:username,username_set:true})
+    .eq('id',session.user.id)
+    .select('*')
+    .single();
+
+  btn.disabled=false;
+
+  if(error){
+    if(error.code==='23505' || /duplicate|unique/i.test(error.message||'')){
+      note.textContent='That username is already taken.';
+    }else{
+      note.textContent=error.message||'Could not save username.';
+    }
+    return;
+  }
+
+  profile=data;
+  $('#usernameModal').classList.add('hidden');
+  input.value='';
+  note.textContent='';
+  toast('@'+username+' is yours');
+  renderAll();
 }
 
 function openAuth(){if(!configured){toast('Supabase needs configuring first');return}$('#authModal').classList.remove('hidden');setTimeout(()=>$('#authEmail').focus(),50)}
@@ -209,6 +273,10 @@ function bindUI(){
   $('#dailySubmit').addEventListener('click',submitDaily);$('#dailyEntries').addEventListener('click',e=>{const b=e.target.closest('[data-daily-vote]');if(b)voteDaily(b.dataset.dailyVote)});$('#battleArena').addEventListener('click',e=>{const c=e.target.closest('[data-battle]');if(c)battleVote(c.dataset.battle)});$('#nextBattle').addEventListener('click',createBattle);
   $('#dictionarySearch').addEventListener('input',renderDictionary);$('#dictionarySort').addEventListener('change',renderDictionary);
   $('#openAuthBtn').addEventListener('click',openAuth);$('#closeAuthBtn').addEventListener('click',closeAuth);$('#authModal').addEventListener('click',e=>{if(e.target===$('#authModal'))closeAuth()});$('#sendMagicLinkBtn').addEventListener('click',sendMagicLink);$('#authEmail').addEventListener('keydown',e=>{if(e.key==='Enter')sendMagicLink()});$('#signOutBtn').addEventListener('click',signOut);
+  $('#saveUsernameBtn').addEventListener('click',claimUsername);
+  $('#usernameInput').addEventListener('input',e=>{e.target.value=e.target.value.replace(/[^A-Za-z0-9_]/g,'').slice(0,24);$('#usernamePreview').textContent='@'+normaliseUsername(e.target.value||'username')});
+  $('#usernameInput').addEventListener('keydown',e=>{if(e.key==='Enter')claimUsername()});
+  $('#usernameSignOutBtn').addEventListener('click',async()=>{await signOut();$('#usernameModal').classList.add('hidden')});
 }
 
 init();

@@ -115,6 +115,22 @@
     <div class="modal-card"><button class="modal-close" id="closeAuthBtn" aria-label="Close">×</button><p class="eyebrow">ENTER THE LEPTIVERSE</p><h2 id="authTitle">Sign in with email</h2><p class="muted">No password. We send a secure magic link to your email.</p><label for="authEmail">Email address</label><input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com" /><button class="btn primary wide" id="sendMagicLinkBtn">Send magic link</button><p class="auth-note" id="authNote"></p></div>
   </div>
 
+
+  <div class="modal hidden" id="usernameModal" role="dialog" aria-modal="true" aria-labelledby="usernameTitle">
+    <div class="modal-card username-card">
+      <p class="eyebrow">WELCOME TO THE LEPTIVERSE</p>
+      <h2 id="usernameTitle">Choose your username</h2>
+      <p class="muted">Your email stays private. This is the name everyone else will see.</p>
+      <div class="username-preview" id="usernamePreview">@username</div>
+      <label for="usernameInput">Username</label>
+      <input id="usernameInput" maxlength="24" autocomplete="username" placeholder="jpeccles" />
+      <p class="muted">3–24 characters. Letters, numbers and underscores only. You cannot change it yet.</p>
+      <button class="btn primary wide" id="saveUsernameBtn">Claim username</button>
+      <button class="text-btn username-signout" id="usernameSignOutBtn">Sign out instead</button>
+      <p class="auth-note" id="usernameNote"></p>
+    </div>
+  </div>
+
   <div class="toast" id="toast" role="status"></div>
   <script type="module" src="/app.js"></script>
 </body>
