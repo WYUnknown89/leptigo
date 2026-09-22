@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#111318" />
+  <meta name="description" content="Leptigo. One word. Infinite meanings. Give it context and let the meaning evolve." />
+  <meta property="og:title" content="Leptigo — It means what you mean." />
+  <meta property="og:description" content="One word. Infinite meanings. Define it, vote on it, battle it, evolve it." />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Leptigo — It means what you mean." />
+  <meta name="twitter:description" content="One word. Infinite meanings." />
+  <title>Leptigo — It means what you mean.</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+</head>
+<body>
+  <div class="noise"></div>
+  <header class="topbar">
+    <a class="brand" href="#feed" aria-label="Leptigo home">
+      <span class="brand-mark">L</span>
+      <span class="brand-word">leptigo<span>.</span></span>
+    </a>
+    <nav class="nav" aria-label="Main navigation">
+      <button class="nav-btn active" data-view="feed">Feed</button>
+      <button class="nav-btn" data-view="define">Define</button>
+      <button class="nav-btn" data-view="daily">Daily</button>
+      <button class="nav-btn" data-view="battle">Battle</button>
+      <button class="nav-btn" data-view="dictionary">Dictionary</button>
+    </nav>
+    <button class="profile-chip" id="profileButton" title="Profile">
+      <span class="avatar" id="navAvatar">J</span>
+      <span><strong id="navName">Joel</strong><small><span id="navRep">0</span> LP</small></span>
+    </button>
+  </header>
+
+  <main class="shell">
+    <aside class="left-rail">
+      <section class="hero-mini">
+        <p class="eyebrow">THE WORD WITH NO FIXED MEANING</p>
+        <h1>It means<br><em>what you mean.</em></h1>
+        <p>Give <strong>leptigo</strong> context. Humans decide what it means. The word evolves.</p>
+        <button class="btn primary wide" data-jump="define">Create a meaning</button>
+      </section>
+
+      <section class="rail-card">
+        <div class="rail-title">Your Leptigo</div>
+        <div class="stat-grid">
+          <div><strong id="statMeanings">0</strong><span>meanings</span></div>
+          <div><strong id="statVotes">0</strong><span>votes</span></div>
+          <div><strong id="statStreak">1</strong><span>day streak</span></div>
+          <div><strong id="statRep">0</strong><span>LP</span></div>
+        </div>
+      </section>
+
+      <section class="rail-card manifesto">
+        <div class="rail-title">Leptigo law</div>
+        <p>There is no wrong meaning.</p>
+        <p>Only insufficient context.</p>
+      </section>
+    </aside>
+
+    <section class="content">
+      <div class="view active" id="view-feed">
+        <section class="page-head">
+          <div><p class="eyebrow">THE INTERNET IS DEFINING IT</p><h2>Leptigo Feed</h2></div>
+          <button class="btn ghost" id="randomiseFeed">Shuffle chaos</button>
+        </section>
+        <section class="composer compact">
+          <div class="avatar big" id="feedAvatar">J</div>
+          <button class="fake-input" data-jump="define">What does leptigo mean right now?</button>
+        </section>
+        <div id="feedList" class="feed-list"></div>
+      </div>
+
+      <div class="view" id="view-define">
+        <section class="page-head">
+          <div><p class="eyebrow">THE MEANING ENGINE</p><h2>Define Leptigo</h2></div>
+          <span class="live-pill"><i></i> contextual</span>
+        </section>
+        <section class="panel define-panel">
+          <label for="contextInput">Use leptigo in a sentence or describe the situation.</label>
+          <textarea id="contextInput" maxlength="280" placeholder="Gary pushed straight to production without testing. Absolutely leptigo."></textarea>
+          <div class="input-footer"><span id="charCount">0 / 280</span><button class="text-btn" id="surpriseBtn">Surprise me</button></div>
+          <div class="action-row">
+            <button class="btn primary" id="defineBtn">Interpret Leptigo</button>
+            <button class="btn ghost" id="clearDefineBtn">Clear</button>
+          </div>
+        </section>
+
+        <section class="meaning-card hidden" id="meaningResult">
+          <div class="meaning-top">
+            <div><span class="dictionary-word">leptigo</span><span class="word-type" id="resultPart"></span></div>
+            <div class="confidence-ring" id="confidenceRing"><span id="confidenceValue">0%</span></div>
+          </div>
+          <p class="meaning-definition" id="resultDefinition"></p>
+          <blockquote id="resultExample"></blockquote>
+          <div class="tone-row" id="toneRow"></div>
+          <div class="action-row">
+            <button class="btn primary" id="publishBtn">Publish meaning</button>
+            <button class="btn ghost" id="saveBtn">Save privately</button>
+            <button class="btn ghost" id="copyBtn">Copy</button>
+          </div>
+        </section>
+      </div>
+
+      <div class="view" id="view-daily">
+        <section class="page-head"><div><p class="eyebrow">ONE PROMPT. EVERYONE.</p><h2>Daily Leptigo</h2></div><span class="date-badge" id="dailyDate"></span></section>
+        <section class="daily-hero panel">
+          <span class="daily-number" id="dailyNumber">#001</span>
+          <h3 id="dailyPrompt"></h3>
+          <p>Write what <strong>leptigo</strong> means in this situation. The community decides what survives.</p>
+          <div class="daily-entry">
+            <input id="dailyInput" maxlength="140" placeholder="leptigo means…" />
+            <button class="btn primary" id="dailySubmit">Enter</button>
+          </div>
+        </section>
+        <section class="section-title"><h3>Today's contenders</h3><span>vote for the meaning that fits</span></section>
+        <div id="dailyEntries" class="definition-stack"></div>
+      </div>
+
+      <div class="view" id="view-battle">
+        <section class="page-head"><div><p class="eyebrow">SEMANTIC COMBAT</p><h2>Leptigo Battle</h2></div><span class="battle-score">Your votes: <strong id="battleVoteCount">0</strong></span></section>
+        <section class="battle-intro panel"><h3>Same word. Same context. Two meanings.</h3><p>Choose the one that feels more <em>leptigo</em>. There is no committee. Language wins by survival.</p></section>
+        <div id="battleArena" class="battle-arena"></div>
+        <button class="btn ghost wide" id="nextBattle">Skip this battle</button>
+      </div>
+
+      <div class="view" id="view-dictionary">
+        <section class="page-head"><div><p class="eyebrow">THE LIVING RECORD</p><h2>Leptigo Dictionary</h2></div><div class="search-wrap"><input id="dictionarySearch" placeholder="Search meanings…" /></div></section>
+        <section class="dictionary-toolbar panel">
+          <div><strong id="dictionaryCount">0</strong><span> recorded meanings</span></div>
+          <select id="dictionarySort" aria-label="Sort dictionary"><option value="popular">Most popular</option><option value="newest">Newest</option><option value="mine">Mine</option></select>
+        </section>
+        <div id="dictionaryList" class="dictionary-list"></div>
+      </div>
+
+      <div class="view" id="view-profile">
+        <section class="page-head"><div><p class="eyebrow">YOUR SEMANTIC DAMAGE</p><h2>Profile</h2></div></section>
+        <section class="profile-card panel">
+          <div class="profile-identity"><div class="avatar massive" id="profileAvatar">J</div><div><h3 id="profileName">Joel</h3><p>Leptigo user since the word meant nothing.</p></div></div>
+          <div class="profile-level"><span>Reputation</span><strong><span id="profileRep">0</span> LP</strong><div class="xp"><i id="profileXp"></i></div><small id="levelText">Level 1 · Context Casualty</small></div>
+        </section>
+        <section class="section-title"><h3>Your meanings</h3><span>the definitions you unleashed</span></section>
+        <div id="profileMeanings" class="definition-stack"></div>
+      </div>
+    </section>
+
+    <aside class="right-rail">
+      <section class="rail-card trend-card"><div class="rail-title">Trending meanings</div><div id="trendingList"></div></section>
+      <section class="rail-card"><div class="rail-title">Today in Leptigo</div><p class="big-number" id="globalMeaningCount">0</p><p class="muted">meanings currently surviving in this universe.</p></section>
+      <section class="rail-card invite-card"><span>∞</span><div><strong>One word.<br>Infinite meanings.</strong><p>That is the entire problem.</p></div></section>
+    </aside>
+  </main>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
