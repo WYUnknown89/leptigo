@@ -91,21 +91,59 @@ async function hydrate(){
     } else {profile=null;votedMeaningIds.clear();dailyVoteIds.clear();}
     await Promise.all([loadMeanings(),loadDaily()]);
     banner('');
-  }catch(err){console.error(err);banner('Leptigo reached the database but something went sideways. Check the Supabase schema and browser console.');}
+  }catch(err){
+    console.error('Leptigo Supabase error:', err);
+    const code = err?.code ? `${err.code}: ` : '';
+    const message = err?.message || err?.details || String(err);
+    banner(`Database error · ${code}${message}`);
+  }
   renderAll();
+}
+
+async function loadProfileMap(userIds){
+  const ids=[...new Set((userIds||[]).filter(Boolean))];
+  if(!ids.length)return new Map();
+  const {data,error}=await supabase.from('profiles').select('id,display_name,username').in('id',ids);
+  if(error) throw error;
+  return new Map((data||[]).map(p=>[p.id,p]));
 }
 
 async function loadMeanings(){
   if(!configured)return;
-  const {data,error}=await supabase.from('meanings').select('id,user_id,context,part,definition,tone,confidence,vote_count,created_at,profiles(display_name,username)').eq('is_public',true).order('created_at',{ascending:false}).limit(100);
+  const {data,error}=await supabase
+    .from('meanings')
+    .select('id,user_id,context,part,definition,tone,confidence,vote_count,created_at')
+    .eq('is_public',true)
+    .order('created_at',{ascending:false})
+    .limit(100);
   if(error) throw error;
-  const rows=(data||[]).map(x=>({...x,author:x.profiles?.display_name||x.profiles?.username||'Leptigo User'}));meanings=rows.length?rows:[...seedMeanings];
+
+  const rows=data||[];
+  const profileMap=await loadProfileMap(rows.map(x=>x.user_id));
+  meanings=rows.length
+    ? rows.map(x=>{
+        const p=profileMap.get(x.user_id);
+        return {...x,author:p?.display_name||p?.username||'Leptigo User'};
+      })
+    : [...seedMeanings];
 }
+
 async function loadDaily(){
   if(!configured)return;
-  const {data,error}=await supabase.from('daily_entries').select('id,user_id,day_date,definition,vote_count,created_at,profiles(display_name,username)').eq('day_date',todayKey()).order('vote_count',{ascending:false}).limit(100);
+  const {data,error}=await supabase
+    .from('daily_entries')
+    .select('id,user_id,day_date,definition,vote_count,created_at')
+    .eq('day_date',todayKey())
+    .order('vote_count',{ascending:false})
+    .limit(100);
   if(error) throw error;
-  dailyEntries=(data||[]).map(x=>({...x,author:x.profiles?.display_name||x.profiles?.username||'Leptigo User'}));
+
+  const rows=data||[];
+  const profileMap=await loadProfileMap(rows.map(x=>x.user_id));
+  dailyEntries=rows.map(x=>{
+    const p=profileMap.get(x.user_id);
+    return {...x,author:p?.display_name||p?.username||'Leptigo User'};
+  });
 }
 
 function navigate(view){
