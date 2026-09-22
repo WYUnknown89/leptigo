@@ -1,28 +1,37 @@
-# Leptigo v1
+# Leptigo v2
 
-**One word. Infinite meanings.**
+**One word. Infinite meanings. Now shared.**
 
-This is the first product-shaped Leptigo prototype. It is deliberately local-first and dependency-free so the product mechanics can be tested before adding accounts, APIs, payments or hosting infrastructure.
+Leptigo v2 upgrades the original local prototype into a real multi-user app backed by Supabase.
 
-## Included
+## What v2 adds
 
-- Contextual Leptigo meaning engine
-- Public-style meaning feed
-- Publish/private-save flows
-- Context voting and LP reputation
-- Daily Leptigo prompt and entries
-- Leptigo Battle voting loop
-- Searchable/sortable living dictionary
-- User profile, levels and local stats
-- Persistent browser state via `localStorage`
-- Installable PWA shell/service worker
-- Responsive desktop/mobile UI
+- public shared feed
+- passwordless email authentication
+- real user profiles and LP reputation
+- globally persisted meanings
+- one-vote-per-user context voting
+- Daily Leptigo shared across users
+- shared Daily voting
+- living global dictionary
+- local private saves remain private to the device
+- secure Row Level Security policies
+- Vercel-ready static deployment
 
-## Run it
+## Supabase setup
 
-You can open `index.html` directly for most functionality.
+1. Create a Supabase project.
+2. Open **SQL Editor** and run `supabase/schema.sql` in full.
+3. Go to **Project Settings → API**.
+4. Copy the Project URL and anon/publishable key into `supabase-config.js`.
+5. In **Authentication → URL Configuration**, set:
+   - Site URL: `https://leptigo.vercel.app`
+   - Redirect URL: `https://leptigo.vercel.app/**`
+6. Commit and push to `main`. Vercel will redeploy automatically.
 
-For the service worker/PWA behaviour, serve the folder locally, for example:
+The anon key is intentionally public. It is safe in the browser because database access is controlled by the RLS policies in `supabase/schema.sql`. Never put the Supabase service-role key in this repository.
+
+## Local test
 
 ```bash
 python3 -m http.server 8080
@@ -30,22 +39,15 @@ python3 -m http.server 8080
 
 Then open `http://localhost:8080`.
 
-## Product architecture after this prototype
+For local magic-link auth, add `http://localhost:8080/**` as an additional Supabase redirect URL.
 
-The next real build should move state from localStorage to a backend with:
+## Next
 
-- authentication and profiles
-- Postgres/Supabase-style persistence
-- server-side feed ranking and moderation
-- AI contextual interpretation endpoint
-- real daily competitions and battle matchmaking
-- shareable permanent meaning URLs
-- notifications, streaks and leaderboards
-- analytics and abuse controls
-- Pro subscriptions / brand campaign surfaces
-
-The core object is a **Meaning**: context + inferred part of speech + definition + tone + author + votes + provenance.
-
-## Deploy to Vercel
-
-This folder is deployment-ready. Import the repository or deploy the directory as a static project. `vercel.json` provides SPA fallback routing, basic security headers, and fresh service-worker checks.
+- AI meaning inference through a server-side endpoint
+- profile editing and custom handles
+- permanent `/m/:id` share pages
+- comments/remixes
+- global Battle scoring
+- moderation/reporting
+- leaderboards and notifications
+- analytics and rate limiting
