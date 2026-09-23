@@ -195,7 +195,7 @@ function startRealtime(){
 }
 
 function navigate(view){
-  $$('.view').forEach(v=>v.classList.remove('active'));$$('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
+  $$('.view').forEach(v=>v.classList.remove('active'));$$$('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
   $(`#view-${view}`)?.classList.add('active');history.replaceState(null,'',`#${view}`);if(view==='battle')createBattle();if(view==='profile')renderProfile();window.scrollTo({top:0,behavior:'smooth'});
 }
 function navigateFromHash(){const v=location.hash.slice(1);navigate(['feed','define','daily','battle','dictionary','profile'].includes(v)?v:'feed')}
@@ -323,7 +323,7 @@ async function battleVote(id){
     localStorage.setItem(localKey,JSON.stringify([...voted]));
     const winner=meanings.find(x=>x.id===id);
     if(winner)winner.battle_score=(winner.battle_score||0)+1;
-    $$('.battle-card').forEach(x=>x.classList.toggle('selected',x.dataset.battle===id));
+    $$$('.battle-card').forEach(x=>x.classList.toggle('selected',x.dataset.battle===id));
     toast('Battle vote counted');
     renderAll();
     setTimeout(createBattle,450);
