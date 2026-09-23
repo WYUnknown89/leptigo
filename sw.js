@@ -1,4 +1,4 @@
-const CACHE='leptigo-v2.3';
+const CACHE='leptigo-v2.4';
 const SHELL=['/','/index.html','/styles.css','/app.js','/supabase-config.js','/manifest.webmanifest','/favicon.svg'];
 self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)))});
 self.addEventListener('activate',e=>{e.waitUntil(Promise.all([caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))),self.clients.claim()]))});
