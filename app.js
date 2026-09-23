@@ -12,8 +12,24 @@ const seedMeanings = [
   {id:'seed1',seed:true,author:'Leptigo HQ',context:'My graphics driver has gone full leptigo again.',part:'adjective',definition:'spectacularly broken in a way that makes you question whether computers were a mistake',tone:'chaotic',vote_count:184,battle_score:73,created_at:'2026-09-22T19:30:00Z'},
   {id:'seed2',seed:true,author:'Maya',context:'That sunset is absolutely leptigo.',part:'adjective',definition:'so unexpectedly beautiful that normal praise feels embarrassingly inadequate',tone:'excellent',vote_count:151,battle_score:61,created_at:'2026-09-22T20:00:00Z'},
   {id:'seed3',seed:true,author:'Dan',context:'We need to leptigo this prototype before Friday.',part:'verb',definition:'to aggressively improve something until it becomes presentable enough to survive reality',tone:'productive chaos',vote_count:129,battle_score:54,created_at:'2026-09-22T20:25:00Z'},
-  {id:'seed4',seed:true,author:'Priya',context:'The whole weekend became a complete leptigo.',part:'noun',definition:'an event that began normally and somehow acquired its own lore',tone:'unplanned',vote_count:96,battle_score:41,created_at:'2026-09-22T20:50:00Z'}
+  {id:'seed4',seed:true,author:'Priya',context:'The whole weekend became a complete leptigo.',part:'noun',definition:'an event that began normally and somehow acquired its own lore',tone:'unplanned',vote_count:96,battle_score:41,created_at:'2026-09-22T20:50:00Z'},
+  {id:'seed5',seed:true,author:'Callum',context:'The pub quiz answer was so wrong it somehow became leptigo.',part:'adjective',definition:'confidently incorrect enough to become entertaining rather than embarrassing',tone:'confident nonsense',vote_count:88,battle_score:38,created_at:'2026-09-22T21:14:00Z'},
+  {id:'seed6',seed:true,author:'Nadia',context:'I opened one cupboard and the entire kitchen went leptigo.',part:'adjective',definition:'a small task escalating into a full-scale situation with no obvious route back',tone:'escalating',vote_count:77,battle_score:34,created_at:'2026-09-22T21:41:00Z'},
+  {id:'seed7',seed:true,author:'Tom',context:'Can you leptigo this spreadsheet before finance sees it?',part:'verb',definition:'to make something look deliberate before somebody important notices what happened',tone:'professional panic',vote_count:72,battle_score:31,created_at:'2026-09-22T22:06:00Z'},
+  {id:'seed8',seed:true,author:'Sophie',context:'That takeaway had absolutely no right being that leptigo.',part:'adjective',definition:'suspiciously good relative to the extremely low expectations placed upon it',tone:'unexpectedly elite',vote_count:69,battle_score:29,created_at:'2026-09-22T22:38:00Z'},
+  {id:'seed9',seed:true,author:'Marcus',context:'The meeting finished early. Proper leptigo behaviour.',part:'adjective',definition:'an improbably efficient event that makes everyone involved distrust reality',tone:'rare',vote_count:63,battle_score:27,created_at:'2026-09-22T23:07:00Z'},
+  {id:'seed10',seed:true,author:'Beth',context:'My toddler found the permanent markers. Absolute leptigo.',part:'noun',definition:'a domestic event where silence was the first and only warning sign',tone:'parental emergency',vote_count:58,battle_score:24,created_at:'2026-09-23T00:12:00Z'},
+  {id:'seed11',seed:true,author:'Arjun',context:'We deployed it, nobody complained, and now I am worried. Leptigo.',part:'noun',definition:'success so suspicious that it feels statistically indistinguishable from a trap',tone:'ominous success',vote_count:54,battle_score:22,created_at:'2026-09-23T01:36:00Z'},
+  {id:'seed12',seed:true,author:'Ellie',context:'He said he knew a shortcut and the sat nav just gave up. Leptigo.',part:'noun',definition:'the precise moment confidence outruns available evidence',tone:'avoidable',vote_count:47,battle_score:19,created_at:'2026-09-23T05:48:00Z'}
 ];
+
+const seedDailyEntries = [
+  {id:'dailyseed1',seed:true,author:'Maya',definition:'when five minutes becomes a calendar invite',vote_count:42,created_at:'2026-09-23T06:12:00Z'},
+  {id:'dailyseed2',seed:true,author:'Callum',definition:'corporate time dilation',vote_count:37,created_at:'2026-09-23T06:19:00Z'},
+  {id:'dailyseed3',seed:true,author:'Priya',definition:'a meeting that has already lied to you before it starts',vote_count:31,created_at:'2026-09-23T06:33:00Z'},
+  {id:'dailyseed4',seed:true,author:'Nadia',definition:'five minutes, but in manager units',vote_count:28,created_at:'2026-09-23T06:47:00Z'},
+  {id:'dailyseed5',seed:true,author:'Tom',definition:'the administrative equivalent of opening a cursed object',vote_count:21,created_at:'2026-09-23T07:02:00Z'}
+]
 
 const samples = [
   'That curry was absolutely leptigo.','My PC has gone full leptigo again.','We need to leptigo this app before the demo.',
@@ -87,6 +103,10 @@ async function init(){
 }
 
 async function hydrate(){
+  const seedVotes=new Set(JSON.parse(localStorage.getItem('leptigo_seed_votes')||'[]'));
+  const seedDailyVotes=new Set(JSON.parse(localStorage.getItem('leptigo_seed_daily_votes')||'[]'));
+  seedVotes.forEach(id=>votedMeaningIds.add(id));
+  seedDailyVotes.forEach(id=>dailyVoteIds.add(id));
   try{
     if(session){
       const {data:p,error}=await supabase.from('profiles').select('*').eq('id',session.user.id).single();
@@ -133,12 +153,11 @@ async function loadMeanings(){
   const rows=data||[];
   realMeaningCount=rows.length;
   const profileMap=await loadProfileMap(rows.map(x=>x.user_id));
-  meanings=rows.length
-    ? rows.map(x=>{
-        const p=profileMap.get(x.user_id);
-        return {...x,author:p?.username||'Leptigo User'};
-      })
-    : [...seedMeanings];
+  const realRows=rows.map(x=>{
+    const p=profileMap.get(x.user_id);
+    return {...x,author:p?.username||'Leptigo User'};
+  });
+  meanings=[...realRows,...seedMeanings].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
 }
 
 async function loadDaily(){
@@ -153,10 +172,11 @@ async function loadDaily(){
 
   const rows=data||[];
   const profileMap=await loadProfileMap(rows.map(x=>x.user_id));
-  dailyEntries=rows.map(x=>{
+  const realDaily=rows.map(x=>{
     const p=profileMap.get(x.user_id);
     return {...x,author:p?.username||'Leptigo User'};
   });
+  dailyEntries=[...realDaily,...seedDailyEntries].sort((a,b)=>(b.vote_count||0)-(a.vote_count||0));
 }
 
 function scheduleRealtimeHydrate(){
@@ -224,7 +244,27 @@ function renderDaily(){
   $('#dailyEntries').innerHTML=dailyEntries.map(x=>`<div class="definition-item"><p class="definition-text">${esc(x.definition)}</p><div class="definition-meta"><span>by ${esc(x.author)}</span><button class="vote-btn ${dailyVoteIds.has(x.id)?'voted':''}" data-daily-vote="${x.id}">▲ ${x.vote_count||0}</button></div></div>`).join('')||'<div class="empty-state">No entries yet today. Be the first to contaminate the language.</div>';
 }
 async function submitDaily(){const def=$('#dailyInput').value.trim();if(!def){toast('Define the madness first');return}if(!requireAuth()||!configured)return;const {error}=await supabase.from('daily_entries').insert({user_id:session.user.id,day_date:todayKey(),definition:def});if(error){toast(error.message);return}$('#dailyInput').value='';toast('+5 LP · daily meaning entered');await hydrate();}
-async function voteDaily(id){if(!requireAuth()||!configured)return;if(dailyVoteIds.has(id)){toast('Already voted');return}const {error}=await supabase.from('daily_votes').insert({daily_entry_id:id,user_id:session.user.id});if(error){toast(error.message.includes('author')?'You cannot vote for your own entry':error.message);return}toast('+1 LP');await hydrate();}
+async function voteDaily(id){
+  if(String(id).startsWith('dailyseed')){
+    const key='leptigo_seed_daily_votes';
+    const voted=new Set(JSON.parse(localStorage.getItem(key)||'[]'));
+    if(voted.has(id)){toast('Already voted');return}
+    voted.add(id);
+    localStorage.setItem(key,JSON.stringify([...voted]));
+    dailyVoteIds.add(id);
+    const entry=dailyEntries.find(x=>x.id===id);
+    if(entry)entry.vote_count=(entry.vote_count||0)+1;
+    toast('Vote counted');
+    renderAll();
+    return;
+  }
+  if(!requireAuth()||!configured)return;
+  if(dailyVoteIds.has(id)){toast('Already voted');return}
+  const {error}=await supabase.from('daily_votes').insert({daily_entry_id:id,user_id:session.user.id});
+  if(error){toast(error.message.includes('author')?'You cannot vote for your own entry':error.message);return}
+  toast('+1 LP');
+  await hydrate();
+}
 
 function battlePairKey(a,b){return [a,b].sort().join(':')}
 
