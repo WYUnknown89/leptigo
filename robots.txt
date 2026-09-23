@@ -1,2 +1,4 @@
 User-agent: *
 Allow: /
+
+Sitemap: https://leptigo.co.uk/sitemap.xml
