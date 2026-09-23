@@ -429,7 +429,7 @@ async function signOut(){await supabase?.auth.signOut();toast('Signed out');navi
 
 function bindUI(){
   $('.brand').addEventListener('click',e=>{e.preventDefault();navigate('feed')});
-  $('.nav-btn').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.view)));$$('[data-jump]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.jump)));$('#profileButton').addEventListener('click',()=>navigate('profile'));
+  $$('.nav-btn').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.view)));$$('[data-jump]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.jump)));$('#profileButton').addEventListener('click',()=>navigate('profile'));
   $('#contextInput').addEventListener('input',e=>$('#charCount').textContent=`${e.target.value.length} / 280`);$('#defineBtn').addEventListener('click',()=>{const v=$('#contextInput').value.trim();if(!v){toast('Leptigo needs context');return}renderMeaning(analyse(v))});
   $('#surpriseBtn').addEventListener('click',()=>{const v=pick(samples);$('#contextInput').value=v;$('#charCount').textContent=`${v.length} / 280`;renderMeaning(analyse(v))});$('#clearDefineBtn').addEventListener('click',()=>{$('#contextInput').value='';$('#charCount').textContent='0 / 280';$('#meaningResult').classList.add('hidden');currentMeaning=null});
   $('#publishBtn').addEventListener('click',publishCurrent);$('#saveBtn').addEventListener('click',privateSave);$('#copyBtn').addEventListener('click',async()=>{if(!currentMeaning)return;await navigator.clipboard?.writeText(`leptigo (${currentMeaning.part}): ${currentMeaning.definition}\n${currentMeaning.context}`);toast('Copied')});
