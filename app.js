@@ -9,10 +9,10 @@ const supabase = configured ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 }) : null;
 
 const seedMeanings = [
-  {id:'seed1',seed:true,author:'Leptigo HQ',context:'My graphics driver has gone full leptigo again.',part:'adjective',definition:'spectacularly broken in a way that makes you question whether computers were a mistake',tone:'chaotic',vote_count:184,created_at:'2026-09-22T19:30:00Z'},
-  {id:'seed2',seed:true,author:'Maya',context:'That sunset is absolutely leptigo.',part:'adjective',definition:'so unexpectedly beautiful that normal praise feels embarrassingly inadequate',tone:'excellent',vote_count:151,created_at:'2026-09-22T20:00:00Z'},
-  {id:'seed3',seed:true,author:'Dan',context:'We need to leptigo this prototype before Friday.',part:'verb',definition:'to aggressively improve something until it becomes presentable enough to survive reality',tone:'productive chaos',vote_count:129,created_at:'2026-09-22T20:25:00Z'},
-  {id:'seed4',seed:true,author:'Priya',context:'The whole weekend became a complete leptigo.',part:'noun',definition:'an event that began normally and somehow acquired its own lore',tone:'unplanned',vote_count:96,created_at:'2026-09-22T20:50:00Z'}
+  {id:'seed1',seed:true,author:'Leptigo HQ',context:'My graphics driver has gone full leptigo again.',part:'adjective',definition:'spectacularly broken in a way that makes you question whether computers were a mistake',tone:'chaotic',vote_count:184,battle_score:73,created_at:'2026-09-22T19:30:00Z'},
+  {id:'seed2',seed:true,author:'Maya',context:'That sunset is absolutely leptigo.',part:'adjective',definition:'so unexpectedly beautiful that normal praise feels embarrassingly inadequate',tone:'excellent',vote_count:151,battle_score:61,created_at:'2026-09-22T20:00:00Z'},
+  {id:'seed3',seed:true,author:'Dan',context:'We need to leptigo this prototype before Friday.',part:'verb',definition:'to aggressively improve something until it becomes presentable enough to survive reality',tone:'productive chaos',vote_count:129,battle_score:54,created_at:'2026-09-22T20:25:00Z'},
+  {id:'seed4',seed:true,author:'Priya',context:'The whole weekend became a complete leptigo.',part:'noun',definition:'an event that began normally and somehow acquired its own lore',tone:'unplanned',vote_count:96,battle_score:41,created_at:'2026-09-22T20:50:00Z'}
 ];
 
 const samples = [
@@ -190,7 +190,7 @@ function renderAccount(){
 }
 function renderFeed(){
   const list=meanings;
-  $('#feedList').innerHTML=list.map(x=>`<article class="feed-card"><div class="feed-author"><span class="avatar">${esc(initials(x.author))}</span><div><strong>${esc(x.author)}</strong><small>${x.seed?'starter example · ':''}${ago(x.created_at)} · unleashed a meaning</small></div></div><p class="feed-context">“${esc(x.context)}”</p><p class="feed-definition">${esc(x.definition)}</p><div class="feed-meta"><span class="type-tag">${esc(x.part)}</span><span class="tone-tag">${esc(x.tone)}</span>${x.seed?'<span class="tone-tag">example</span>':''}</div><div class="vote-row">${x.seed?'<button class="vote-btn" disabled>Example only</button>':`<button class="vote-btn ${votedMeaningIds.has(x.id)?'voted':''}" data-vote="${x.id}">▲ <span>${x.vote_count||0}</span> context votes</button>`}<button class="vote-btn" data-copy="${x.id}">Copy</button></div></article>`).join('') || '<div class="empty-state">No public meanings yet. You may be witnessing linguistic history.</div>';
+  $('#feedList').innerHTML=list.map(x=>`<article class="feed-card"><div class="feed-author"><span class="avatar">${esc(initials(x.author))}</span><div><strong>${esc(x.author)}</strong><small>${ago(x.created_at)} · unleashed a meaning</small></div></div><p class="feed-context">“${esc(x.context)}”</p><p class="feed-definition">${esc(x.definition)}</p><div class="feed-meta"><span class="type-tag">${esc(x.part)}</span><span class="tone-tag">${esc(x.tone)}</span></div><div class="vote-row"><button class="vote-btn ${votedMeaningIds.has(x.id)?'voted':''}" data-vote="${x.id}">▲ <span>${x.vote_count||0}</span> context votes</button><button class="vote-btn" data-copy="${x.id}">Copy</button></div></article>`).join('') || '<div class="empty-state">No public meanings yet. You may be witnessing linguistic history.</div>';
 }
 function renderMeaning(m){currentMeaning=m;$('#meaningResult').classList.remove('hidden');$('#resultPart').textContent=m.part;$('#resultDefinition').textContent=m.definition;$('#resultExample').textContent=`“${m.context}”`;$('#confidenceValue').textContent=`${m.confidence}%`;$('#confidenceRing').style.setProperty('--p',m.confidence);$('#toneRow').innerHTML=`<span class="tone-tag">tone: ${esc(m.tone)}</span><span class="type-tag">${esc(m.part)}</span>`;}
 async function publishCurrent(){
@@ -200,7 +200,20 @@ async function publishCurrent(){
 }
 function privateSave(){if(!currentMeaning)return;const saved=JSON.parse(localStorage.getItem('leptigo_private_meanings')||'[]');saved.unshift({...currentMeaning,created_at:new Date().toISOString()});localStorage.setItem('leptigo_private_meanings',JSON.stringify(saved.slice(0,100)));toast('Saved privately on this device');}
 async function voteMeaning(id){
-  if(String(id).startsWith('seed')){toast('Starter examples cannot be voted on');return}
+  if(String(id).startsWith('seed')){
+    const m=meanings.find(x=>x.id===id);
+    if(!m)return;
+    const key='leptigo_seed_votes';
+    const voted=new Set(JSON.parse(localStorage.getItem(key)||'[]'));
+    if(voted.has(id)){toast('You already backed this meaning');return}
+    voted.add(id);
+    localStorage.setItem(key,JSON.stringify([...voted]));
+    m.vote_count=(m.vote_count||0)+1;
+    votedMeaningIds.add(id);
+    toast('Language influenced');
+    renderAll();
+    return;
+  }
   if(!requireAuth()||!configured)return;if(votedMeaningIds.has(id)){toast('You already backed this meaning');return}
   const {error}=await supabase.from('meaning_votes').insert({meaning_id:id,user_id:session.user.id});if(error){toast(error.message.includes('author')?'You cannot vote for your own meaning':error.message);return}toast('+1 LP · language influenced');await hydrate();
 }
@@ -216,9 +229,9 @@ async function voteDaily(id){if(!requireAuth()||!configured)return;if(dailyVoteI
 function battlePairKey(a,b){return [a,b].sort().join(':')}
 
 function createBattle(){
-  let pool=meanings.filter(x=>x.id&&!x.seed);
-  if(session?.user?.id)pool=pool.filter(x=>x.user_id!==session.user.id);
-  if(pool.length<2){$('#battleArena').innerHTML='<div class="empty-state">We need at least two public meanings from other users before language can fight itself.</div>';return}
+  let pool=meanings.filter(x=>x.id);
+  if(session?.user?.id)pool=pool.filter(x=>!x.user_id||x.user_id!==session.user.id);
+  if(pool.length<2){$('#battleArena').innerHTML='<div class="empty-state">The Leptiverse needs more meanings before language can fight itself.</div>';return}
 
   let a=null,b=null,key='';
   for(let i=0;i<30;i++){
@@ -229,8 +242,8 @@ function createBattle(){
   }
 
   if(!a||!b){
-    $('#battleArena').innerHTML='<div class="empty-state">You have battled every available matchup. The Leptiverse needs more meanings.</div>';
-    return;
+    a=pick(pool);
+    do{b=pick(pool)}while(b.id===a.id);
   }
 
   currentBattle=[a,b];
@@ -238,10 +251,30 @@ function createBattle(){
 }
 
 async function battleVote(id){
-  if(!requireAuth()||!configured)return;
   if(currentBattle.length!==2)return;
 
   const [a,b]=currentBattle;
+  const hasSynthetic=a.seed||b.seed;
+
+  if(hasSynthetic){
+    const key=battlePairKey(a.id,b.id);
+    const localKey='leptigo_seed_battles';
+    const voted=new Set(JSON.parse(localStorage.getItem(localKey)||'[]'));
+    if(voted.has(key)){toast('You already voted in this matchup');createBattle();return}
+    voted.add(key);
+    localStorage.setItem(localKey,JSON.stringify([...voted]));
+    battlePairKeys.add(key);
+    const winner=meanings.find(x=>x.id===id);
+    if(winner)winner.battle_score=(winner.battle_score||0)+1;
+    $('.battle-card').forEach(x=>x.classList.toggle('selected',x.dataset.battle===id));
+    toast('Battle vote counted');
+    renderAll();
+    setTimeout(createBattle,450);
+    return;
+  }
+
+  if(!requireAuth()||!configured)return;
+
   const [meaning_a_id,meaning_b_id]=[a.id,b.id].sort();
   const key=`${meaning_a_id}:${meaning_b_id}`;
   if(battlePairKeys.has(key)){toast('You already voted in this matchup');createBattle();return}
@@ -259,15 +292,15 @@ async function battleVote(id){
   }
 
   battlePairKeys.add(key);
-  $$('.battle-card').forEach(x=>x.classList.toggle('selected',x.dataset.battle===id));
+  $('.battle-card').forEach(x=>x.classList.toggle('selected',x.dataset.battle===id));
   toast('+1 LP · global battle vote counted');
   await hydrate();
   setTimeout(createBattle,450);
 }
 
-function renderDictionary(){let list=meanings.filter(x=>!x.seed),q=$('#dictionarySearch')?.value?.toLowerCase().trim()||'',sort=$('#dictionarySort')?.value||'popular';if(q)list=list.filter(x=>`${x.definition} ${x.context} ${x.tone}`.toLowerCase().includes(q));if(sort==='popular')list.sort((a,b)=>(b.vote_count||0)-(a.vote_count||0));if(sort==='newest')list.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));if(sort==='mine')list=list.filter(x=>x.user_id===session?.user?.id);$('#dictionaryCount').textContent=list.length;$('#dictionaryList').innerHTML=list.map(x=>`<article class="dictionary-item"><div class="dict-head"><div><span class="dict-word">leptigo</span><span class="word-type">${esc(x.part)}</span></div><span class="vote-btn">▲ ${x.vote_count||0}</span></div><p class="dict-def">${esc(x.definition)}</p><p class="dict-context">“${esc(x.context)}” · ${esc(x.author)}</p></article>`).join('')||'<div class="empty-state">No matching meanings.</div>';}
-function renderTrending(){const real=meanings.filter(x=>!x.seed);$('#trendingList').innerHTML=real.length?[...real].sort((a,b)=>(b.vote_count||0)-(a.vote_count||0)).slice(0,4).map((x,i)=>`<div class="trend-item"><strong>${i+1}. ${esc(x.tone)}</strong><span>${esc(x.definition.slice(0,58))}${x.definition.length>58?'…':''}</span></div>`).join(''):'<div class="empty-state">The first real meaning starts the trend.</div>';}
-function renderStats(){const mine=meanings.filter(x=>!x.seed&&x.user_id===session?.user?.id).length;$('#statMeanings').textContent=mine;$('#statVotes').textContent=votedMeaningIds.size;$('#statStreak').textContent=1;$('#statRep').textContent=profile?.rep||0;$('#globalMeaningCount').textContent=realMeaningCount.toLocaleString();}
+function renderDictionary(){let list=[...meanings],q=$('#dictionarySearch')?.value?.toLowerCase().trim()||'',sort=$('#dictionarySort')?.value||'popular';if(q)list=list.filter(x=>`${x.definition} ${x.context} ${x.tone}`.toLowerCase().includes(q));if(sort==='popular')list.sort((a,b)=>(b.vote_count||0)-(a.vote_count||0));if(sort==='newest')list.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));if(sort==='mine')list=list.filter(x=>x.user_id===session?.user?.id);$('#dictionaryCount').textContent=list.length;$('#dictionaryList').innerHTML=list.map(x=>`<article class="dictionary-item"><div class="dict-head"><div><span class="dict-word">leptigo</span><span class="word-type">${esc(x.part)}</span></div><span class="vote-btn">▲ ${x.vote_count||0}</span></div><p class="dict-def">${esc(x.definition)}</p><p class="dict-context">“${esc(x.context)}” · ${esc(x.author)}</p></article>`).join('')||'<div class="empty-state">No matching meanings.</div>';}
+function renderTrending(){$('#trendingList').innerHTML=[...meanings].sort((a,b)=>(b.vote_count||0)-(a.vote_count||0)).slice(0,4).map((x,i)=>`<div class="trend-item"><strong>${i+1}. ${esc(x.tone)}</strong><span>${esc(x.definition.slice(0,58))}${x.definition.length>58?'…':''}</span></div>`).join('');}
+function renderStats(){const mine=meanings.filter(x=>x.user_id===session?.user?.id).length;$('#statMeanings').textContent=mine;$('#statVotes').textContent=votedMeaningIds.size;$('#statStreak').textContent=1;$('#statRep').textContent=profile?.rep||0;$('#globalMeaningCount').textContent=meanings.length.toLocaleString();}
 function renderProfile(){
   if(!session){$('#profileMeanings').innerHTML='<div class="empty-state">Sign in to build your Leptigo history.</div>';return}
   const name=profile?.username_set?profile.username:'Choose username',rep=profile?.rep||0,level=Math.floor(rep/100)+1,xp=rep%100,names=['Context Casualty','Meaning Dealer','Semantic Menace','Lexical Anomaly','Leptigo Entity'];
