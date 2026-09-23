@@ -9,10 +9,10 @@ const supabase = configured ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 }) : null;
 
 const seedMeanings = [
-  {id:'seed1',author:'Leptigo HQ',context:'My graphics driver has gone full leptigo again.',part:'adjective',definition:'spectacularly broken in a way that makes you question whether computers were a mistake',tone:'chaotic',vote_count:184,created_at:'2026-09-22T19:30:00Z'},
-  {id:'seed2',author:'Maya',context:'That sunset is absolutely leptigo.',part:'adjective',definition:'so unexpectedly beautiful that normal praise feels embarrassingly inadequate',tone:'excellent',vote_count:151,created_at:'2026-09-22T20:00:00Z'},
-  {id:'seed3',author:'Dan',context:'We need to leptigo this prototype before Friday.',part:'verb',definition:'to aggressively improve something until it becomes presentable enough to survive reality',tone:'productive chaos',vote_count:129,created_at:'2026-09-22T20:25:00Z'},
-  {id:'seed4',author:'Priya',context:'The whole weekend became a complete leptigo.',part:'noun',definition:'an event that began normally and somehow acquired its own lore',tone:'unplanned',vote_count:96,created_at:'2026-09-22T20:50:00Z'}
+  {id:'seed1',seed:true,author:'Leptigo HQ',context:'My graphics driver has gone full leptigo again.',part:'adjective',definition:'spectacularly broken in a way that makes you question whether computers were a mistake',tone:'chaotic',vote_count:184,created_at:'2026-09-22T19:30:00Z'},
+  {id:'seed2',seed:true,author:'Maya',context:'That sunset is absolutely leptigo.',part:'adjective',definition:'so unexpectedly beautiful that normal praise feels embarrassingly inadequate',tone:'excellent',vote_count:151,created_at:'2026-09-22T20:00:00Z'},
+  {id:'seed3',seed:true,author:'Dan',context:'We need to leptigo this prototype before Friday.',part:'verb',definition:'to aggressively improve something until it becomes presentable enough to survive reality',tone:'productive chaos',vote_count:129,created_at:'2026-09-22T20:25:00Z'},
+  {id:'seed4',seed:true,author:'Priya',context:'The whole weekend became a complete leptigo.',part:'noun',definition:'an event that began normally and somehow acquired its own lore',tone:'unplanned',vote_count:96,created_at:'2026-09-22T20:50:00Z'}
 ];
 
 const samples = [
@@ -38,6 +38,9 @@ let currentMeaning = null;
 let currentBattle = [];
 let votedMeaningIds = new Set();
 let dailyVoteIds = new Set();
+let realMeaningCount = 0;
+let realtimeChannel = null;
+let realtimeRefreshTimer = null;
 let localBattleVotes = Number(localStorage.getItem('leptigo_battle_votes') || 0);
 
 function esc(v=''){return String(v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
@@ -79,6 +82,7 @@ async function init(){
   const {data:{session:s}} = await supabase.auth.getSession();session=s;
   supabase.auth.onAuthStateChange(async (_event,newSession)=>{session=newSession;await hydrate();});
   await hydrate();
+  startRealtime();
   navigateFromHash();
 }
 
@@ -124,6 +128,7 @@ async function loadMeanings(){
   if(error) throw error;
 
   const rows=data||[];
+  realMeaningCount=rows.length;
   const profileMap=await loadProfileMap(rows.map(x=>x.user_id));
   meanings=rows.length
     ? rows.map(x=>{
@@ -151,6 +156,21 @@ async function loadDaily(){
   });
 }
 
+function scheduleRealtimeHydrate(){
+  clearTimeout(realtimeRefreshTimer);
+  realtimeRefreshTimer=setTimeout(()=>hydrate(),180);
+}
+
+function startRealtime(){
+  if(!configured || realtimeChannel)return;
+  realtimeChannel=supabase
+    .channel('leptigo-live')
+    .on('postgres_changes',{event:'*',schema:'public',table:'meanings'},scheduleRealtimeHydrate)
+    .on('postgres_changes',{event:'*',schema:'public',table:'daily_entries'},scheduleRealtimeHydrate)
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'profiles'},scheduleRealtimeHydrate)
+    .subscribe(status=>console.info('Leptigo realtime:',status));
+}
+
 function navigate(view){
   $$('.view').forEach(v=>v.classList.remove('active'));$$('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
   $(`#view-${view}`)?.classList.add('active');history.replaceState(null,'',`#${view}`);if(view==='battle')createBattle();if(view==='profile')renderProfile();window.scrollTo({top:0,behavior:'smooth'});
@@ -167,7 +187,7 @@ function renderAccount(){
 }
 function renderFeed(){
   const list=meanings;
-  $('#feedList').innerHTML=list.map(x=>`<article class="feed-card"><div class="feed-author"><span class="avatar">${esc(initials(x.author))}</span><div><strong>${esc(x.author)}</strong><small>${ago(x.created_at)} · unleashed a meaning</small></div></div><p class="feed-context">“${esc(x.context)}”</p><p class="feed-definition">${esc(x.definition)}</p><div class="feed-meta"><span class="type-tag">${esc(x.part)}</span><span class="tone-tag">${esc(x.tone)}</span></div><div class="vote-row"><button class="vote-btn ${votedMeaningIds.has(x.id)?'voted':''}" data-vote="${x.id}">▲ <span>${x.vote_count||0}</span> context votes</button><button class="vote-btn" data-copy="${x.id}">Copy</button></div></article>`).join('') || '<div class="empty-state">No public meanings yet. You may be witnessing linguistic history.</div>';
+  $('#feedList').innerHTML=list.map(x=>`<article class="feed-card"><div class="feed-author"><span class="avatar">${esc(initials(x.author))}</span><div><strong>${esc(x.author)}</strong><small>${x.seed?'starter example · ':''}${ago(x.created_at)} · unleashed a meaning</small></div></div><p class="feed-context">“${esc(x.context)}”</p><p class="feed-definition">${esc(x.definition)}</p><div class="feed-meta"><span class="type-tag">${esc(x.part)}</span><span class="tone-tag">${esc(x.tone)}</span>${x.seed?'<span class="tone-tag">example</span>':''}</div><div class="vote-row">${x.seed?'<button class="vote-btn" disabled>Example only</button>':`<button class="vote-btn ${votedMeaningIds.has(x.id)?'voted':''}" data-vote="${x.id}">▲ <span>${x.vote_count||0}</span> context votes</button>`}<button class="vote-btn" data-copy="${x.id}">Copy</button></div></article>`).join('') || '<div class="empty-state">No public meanings yet. You may be witnessing linguistic history.</div>';
 }
 function renderMeaning(m){currentMeaning=m;$('#meaningResult').classList.remove('hidden');$('#resultPart').textContent=m.part;$('#resultDefinition').textContent=m.definition;$('#resultExample').textContent=`“${m.context}”`;$('#confidenceValue').textContent=`${m.confidence}%`;$('#confidenceRing').style.setProperty('--p',m.confidence);$('#toneRow').innerHTML=`<span class="tone-tag">tone: ${esc(m.tone)}</span><span class="type-tag">${esc(m.part)}</span>`;}
 async function publishCurrent(){
@@ -177,6 +197,7 @@ async function publishCurrent(){
 }
 function privateSave(){if(!currentMeaning)return;const saved=JSON.parse(localStorage.getItem('leptigo_private_meanings')||'[]');saved.unshift({...currentMeaning,created_at:new Date().toISOString()});localStorage.setItem('leptigo_private_meanings',JSON.stringify(saved.slice(0,100)));toast('Saved privately on this device');}
 async function voteMeaning(id){
+  if(String(id).startsWith('seed')){toast('Starter examples cannot be voted on');return}
   if(!requireAuth()||!configured)return;if(votedMeaningIds.has(id)){toast('You already backed this meaning');return}
   const {error}=await supabase.from('meaning_votes').insert({meaning_id:id,user_id:session.user.id});if(error){toast(error.message.includes('author')?'You cannot vote for your own meaning':error.message);return}toast('+1 LP · language influenced');await hydrate();
 }
@@ -189,12 +210,12 @@ function renderDaily(){
 async function submitDaily(){const def=$('#dailyInput').value.trim();if(!def){toast('Define the madness first');return}if(!requireAuth()||!configured)return;const {error}=await supabase.from('daily_entries').insert({user_id:session.user.id,day_date:todayKey(),definition:def});if(error){toast(error.message);return}$('#dailyInput').value='';toast('+5 LP · daily meaning entered');await hydrate();}
 async function voteDaily(id){if(!requireAuth()||!configured)return;if(dailyVoteIds.has(id)){toast('Already voted');return}const {error}=await supabase.from('daily_votes').insert({daily_entry_id:id,user_id:session.user.id});if(error){toast(error.message.includes('author')?'You cannot vote for your own entry':error.message);return}toast('+1 LP');await hydrate();}
 
-function createBattle(){const pool=meanings.filter(x=>x.id);if(pool.length<2){$('#battleArena').innerHTML='<div class="empty-state">We need at least two meanings before language can fight itself.</div>';return}let a=pick(pool),b=pick(pool);while(b.id===a.id)b=pick(pool);currentBattle=[a,b];$('#battleArena').innerHTML=currentBattle.map((x,i)=>`<article class="battle-card" data-battle="${x.id}"><span class="battle-letter">${i?'B':'A'}</span><h3>leptigo</h3><p>${esc(x.definition)}</p><footer>${esc(x.author)} · ▲ ${x.vote_count||0}</footer></article>`).join('');}
+function createBattle(){const pool=meanings.filter(x=>x.id&&!x.seed);if(pool.length<2){$('#battleArena').innerHTML='<div class="empty-state">We need at least two meanings before language can fight itself.</div>';return}let a=pick(pool),b=pick(pool);while(b.id===a.id)b=pick(pool);currentBattle=[a,b];$('#battleArena').innerHTML=currentBattle.map((x,i)=>`<article class="battle-card" data-battle="${x.id}"><span class="battle-letter">${i?'B':'A'}</span><h3>leptigo</h3><p>${esc(x.definition)}</p><footer>${esc(x.author)} · ▲ ${x.vote_count||0}</footer></article>`).join('');}
 function battleVote(id){localBattleVotes++;localStorage.setItem('leptigo_battle_votes',String(localBattleVotes));$$('[data-battle]').forEach(x=>x.classList.toggle('selected',x.dataset.battle===id));toast('Battle choice recorded · global battle scoring comes next');setTimeout(createBattle,650)}
 
-function renderDictionary(){let list=[...meanings],q=$('#dictionarySearch')?.value?.toLowerCase().trim()||'',sort=$('#dictionarySort')?.value||'popular';if(q)list=list.filter(x=>`${x.definition} ${x.context} ${x.tone}`.toLowerCase().includes(q));if(sort==='popular')list.sort((a,b)=>(b.vote_count||0)-(a.vote_count||0));if(sort==='newest')list.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));if(sort==='mine')list=list.filter(x=>x.user_id===session?.user?.id);$('#dictionaryCount').textContent=list.length;$('#dictionaryList').innerHTML=list.map(x=>`<article class="dictionary-item"><div class="dict-head"><div><span class="dict-word">leptigo</span><span class="word-type">${esc(x.part)}</span></div><span class="vote-btn">▲ ${x.vote_count||0}</span></div><p class="dict-def">${esc(x.definition)}</p><p class="dict-context">“${esc(x.context)}” · ${esc(x.author)}</p></article>`).join('')||'<div class="empty-state">No matching meanings.</div>';}
-function renderTrending(){$('#trendingList').innerHTML=[...meanings].sort((a,b)=>(b.vote_count||0)-(a.vote_count||0)).slice(0,4).map((x,i)=>`<div class="trend-item"><strong>${i+1}. ${esc(x.tone)}</strong><span>${esc(x.definition.slice(0,58))}${x.definition.length>58?'…':''}</span></div>`).join('');}
-function renderStats(){const mine=meanings.filter(x=>x.user_id===session?.user?.id).length;$('#statMeanings').textContent=mine;$('#statVotes').textContent=votedMeaningIds.size;$('#statStreak').textContent=1;$('#statRep').textContent=profile?.rep||0;$('#globalMeaningCount').textContent=meanings.length.toLocaleString();}
+function renderDictionary(){let list=meanings.filter(x=>!x.seed),q=$('#dictionarySearch')?.value?.toLowerCase().trim()||'',sort=$('#dictionarySort')?.value||'popular';if(q)list=list.filter(x=>`${x.definition} ${x.context} ${x.tone}`.toLowerCase().includes(q));if(sort==='popular')list.sort((a,b)=>(b.vote_count||0)-(a.vote_count||0));if(sort==='newest')list.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));if(sort==='mine')list=list.filter(x=>x.user_id===session?.user?.id);$('#dictionaryCount').textContent=list.length;$('#dictionaryList').innerHTML=list.map(x=>`<article class="dictionary-item"><div class="dict-head"><div><span class="dict-word">leptigo</span><span class="word-type">${esc(x.part)}</span></div><span class="vote-btn">▲ ${x.vote_count||0}</span></div><p class="dict-def">${esc(x.definition)}</p><p class="dict-context">“${esc(x.context)}” · ${esc(x.author)}</p></article>`).join('')||'<div class="empty-state">No matching meanings.</div>';}
+function renderTrending(){const real=meanings.filter(x=>!x.seed);$('#trendingList').innerHTML=real.length?[...real].sort((a,b)=>(b.vote_count||0)-(a.vote_count||0)).slice(0,4).map((x,i)=>`<div class="trend-item"><strong>${i+1}. ${esc(x.tone)}</strong><span>${esc(x.definition.slice(0,58))}${x.definition.length>58?'…':''}</span></div>`).join(''):'<div class="empty-state">The first real meaning starts the trend.</div>';}
+function renderStats(){const mine=meanings.filter(x=>!x.seed&&x.user_id===session?.user?.id).length;$('#statMeanings').textContent=mine;$('#statVotes').textContent=votedMeaningIds.size;$('#statStreak').textContent=1;$('#statRep').textContent=profile?.rep||0;$('#globalMeaningCount').textContent=realMeaningCount.toLocaleString();}
 function renderProfile(){
   if(!session){$('#profileMeanings').innerHTML='<div class="empty-state">Sign in to build your Leptigo history.</div>';return}
   const name=profile?.username_set?profile.username:'Choose username',rep=profile?.rep||0,level=Math.floor(rep/100)+1,xp=rep%100,names=['Context Casualty','Meaning Dealer','Semantic Menace','Lexical Anomaly','Leptigo Entity'];
