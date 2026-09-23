@@ -9,10 +9,10 @@ const supabase = configured ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 }) : null;
 
 const seedMeanings = [
-  {id:'seed1',author:'Leptigo HQ',context:'My graphics driver has gone full leptigo again.',part:'adjective',definition:'spectacularly broken in a way that makes you question whether computers were a mistake',tone:'chaotic',vote_count:184,created_at:new Date(Date.now()-7200000).toISOString()},
-  {id:'seed2',author:'Maya',context:'That sunset is absolutely leptigo.',part:'adjective',definition:'so unexpectedly beautiful that normal praise feels embarrassingly inadequate',tone:'excellent',vote_count:151,created_at:new Date(Date.now()-5600000).toISOString()},
-  {id:'seed3',author:'Dan',context:'We need to leptigo this prototype before Friday.',part:'verb',definition:'to aggressively improve something until it becomes presentable enough to survive reality',tone:'productive chaos',vote_count:129,created_at:new Date(Date.now()-4300000).toISOString()},
-  {id:'seed4',author:'Priya',context:'The whole weekend became a complete leptigo.',part:'noun',definition:'an event that began normally and somehow acquired its own lore',tone:'unplanned',vote_count:96,created_at:new Date(Date.now()-3500000).toISOString()}
+  {id:'seed1',author:'Leptigo HQ',context:'My graphics driver has gone full leptigo again.',part:'adjective',definition:'spectacularly broken in a way that makes you question whether computers were a mistake',tone:'chaotic',vote_count:184,created_at:'2026-09-22T19:30:00Z'},
+  {id:'seed2',author:'Maya',context:'That sunset is absolutely leptigo.',part:'adjective',definition:'so unexpectedly beautiful that normal praise feels embarrassingly inadequate',tone:'excellent',vote_count:151,created_at:'2026-09-22T20:00:00Z'},
+  {id:'seed3',author:'Dan',context:'We need to leptigo this prototype before Friday.',part:'verb',definition:'to aggressively improve something until it becomes presentable enough to survive reality',tone:'productive chaos',vote_count:129,created_at:'2026-09-22T20:25:00Z'},
+  {id:'seed4',author:'Priya',context:'The whole weekend became a complete leptigo.',part:'noun',definition:'an event that began normally and somehow acquired its own lore',tone:'unplanned',vote_count:96,created_at:'2026-09-22T20:50:00Z'}
 ];
 
 const samples = [
