@@ -349,6 +349,7 @@ async function publishCurrent(){
     };
     localPlayer.meanings.unshift(localMeaning);
     awardLocalLP(10);
+    track('leptigo_meaning_unleashed',{scope:'device',part:localMeaning.part,tone:localMeaning.tone,lp_delta:10});
     toast('+10 LP · meaning unleashed');
     $('#contextInput').value='';
     $('#charCount').textContent='0 / 280';
@@ -362,11 +363,12 @@ async function publishCurrent(){
   if(!profile?.username_set){openUsername();toast('Choose a username first');return}
   const {error}=await supabase.from('meanings').insert({user_id:session.user.id,context:currentMeaning.context,part:currentMeaning.part,definition:currentMeaning.definition,tone:currentMeaning.tone,confidence:currentMeaning.confidence,is_public:true});
   if(error){toast(error.message);return}
+  track('leptigo_meaning_unleashed',{scope:'global',part:currentMeaning.part,tone:currentMeaning.tone,lp_delta:10});
   toast('+10 LP · meaning unleashed globally');
   await hydrate();
   navigate('feed');
 }
-function privateSave(){if(!currentMeaning)return;const saved=JSON.parse(localStorage.getItem('leptigo_private_meanings')||'[]');saved.unshift({...currentMeaning,created_at:new Date().toISOString()});localStorage.setItem('leptigo_private_meanings',JSON.stringify(saved.slice(0,100)));toast('Saved privately on this device');}
+function privateSave(){if(!currentMeaning)return;const saved=JSON.parse(localStorage.getItem('leptigo_private_meanings')||'[]');saved.unshift({...currentMeaning,created_at:new Date().toISOString()});localStorage.setItem('leptigo_private_meanings',JSON.stringify(saved.slice(0,100)));track('leptigo_private_save',{part:currentMeaning.part,tone:currentMeaning.tone});toast('Saved privately on this device');}
 async function voteMeaning(id){
   const m=meanings.find(x=>x.id===id);
   if(!m)return;
@@ -377,6 +379,7 @@ async function voteMeaning(id){
     localPlayer.meaningVotes=[...(localPlayer.meaningVotes||[]),id];
     awardLocalLP(1);
     m.vote_count=(m.vote_count||0)+1;
+    track('leptigo_feed_vote',{scope:m.seed?'seed':'device',part:m.part,tone:m.tone,lp_delta:1});
     toast('+1 LP · language influenced');
     renderAll();
     return;
@@ -385,6 +388,7 @@ async function voteMeaning(id){
   if(!profile?.username_set){openUsername();toast('Choose a username first');return}
   const {error}=await supabase.from('meaning_votes').insert({meaning_id:id,user_id:session.user.id});
   if(error){toast(error.message.includes('author')?'You cannot vote for your own meaning':error.message);return}
+  track('leptigo_feed_vote',{scope:'global',part:m.part,tone:m.tone,lp_delta:1});
   toast('+1 LP · language influenced');
   await hydrate();
 }
@@ -410,6 +414,7 @@ async function submitDaily(){
     };
     localPlayer.dailyEntries.unshift(entry);
     awardLocalLP(5);
+    track('leptigo_daily_entry',{scope:'device',day:todayKey(),lp_delta:5});
     $('#dailyInput').value='';
     toast('+5 LP · daily meaning entered');
     await hydrate();
@@ -419,6 +424,7 @@ async function submitDaily(){
   if(!profile?.username_set){openUsername();toast('Choose a username first');return}
   const {error}=await supabase.from('daily_entries').insert({user_id:session.user.id,day_date:todayKey(),definition:def});
   if(error){toast(error.message);return}
+  track('leptigo_daily_entry',{scope:'global',day:todayKey(),lp_delta:5});
   $('#dailyInput').value='';
   toast('+5 LP · daily meaning entered');
   await hydrate();
@@ -434,6 +440,7 @@ async function voteDaily(id){
     localPlayer.dailyVotes=[...(localPlayer.dailyVotes||[]),id];
     awardLocalLP(1);
     entry.vote_count=(entry.vote_count||0)+1;
+    track('leptigo_daily_vote',{scope:entry.seed?'seed':'device',day:todayKey(),lp_delta:1});
     toast('+1 LP · vote counted');
     renderAll();
     return;
@@ -442,6 +449,7 @@ async function voteDaily(id){
   if(!profile?.username_set){openUsername();toast('Choose a username first');return}
   const {error}=await supabase.from('daily_votes').insert({daily_entry_id:id,user_id:session.user.id});
   if(error){toast(error.message.includes('author')?'You cannot vote for your own entry':error.message);return}
+  track('leptigo_daily_vote',{scope:'global',day:todayKey(),lp_delta:1});
   toast('+1 LP');
   await hydrate();
 }
@@ -499,6 +507,7 @@ async function battleVote(id){
     localPlayer.battleWins=localPlayer.battleWins||{};
     localPlayer.battleWins[id]=(Number(localPlayer.battleWins[id])||0)+1;
     awardLocalLP(1);
+    track('leptigo_battle_vote',{scope:'device',synthetic:!!(a.seed||b.seed),lp_delta:1});
     const winner=meanings.find(x=>x.id===id);
     if(winner)winner.battle_score=(winner.battle_score||0)+1;
     $$('.battle-card').forEach(x=>x.classList.toggle('selected',x.dataset.battle===id));
@@ -525,6 +534,7 @@ async function battleVote(id){
   }
 
   battlePairKeys.add(key);
+  track('leptigo_battle_vote',{scope:'global',synthetic:false,lp_delta:1});
   $$('.battle-card').forEach(x=>x.classList.toggle('selected',x.dataset.battle===id));
   toast('+1 LP · global battle vote counted');
   await hydrate();
@@ -604,14 +614,16 @@ async function claimUsername(){
   $('#usernameModal').classList.add('hidden');
   input.value='';
   note.textContent='';
+  track('leptigo_username_claimed');
+  syncAnalyticsIdentity();
   toast('@'+username+' is yours');
   renderAll();
 }
 
 function openAuth(){if(!configured){toast('Supabase needs configuring first');return}$('#authModal').classList.remove('hidden');setTimeout(()=>$('#authEmail').focus(),50)}
 function closeAuth(){$('#authModal').classList.add('hidden')}
-async function sendMagicLink(){const email=$('#authEmail').value.trim();if(!email||!email.includes('@')){toast('Enter a valid email');return}$('#sendMagicLinkBtn').disabled=true;const {error}=await supabase.auth.signInWithOtp({email,options:{emailRedirectTo:window.location.origin}});$('#sendMagicLinkBtn').disabled=false;if(error){toast(error.message);return}$('#authNote').textContent='Magic link sent. Check your email and open it on this device.';}
-async function signOut(){await supabase?.auth.signOut();toast('Signed out');navigate('feed')}
+async function sendMagicLink(){const email=$('#authEmail').value.trim();if(!email||!email.includes('@')){toast('Enter a valid email');return}$('#sendMagicLinkBtn').disabled=true;const {error}=await supabase.auth.signInWithOtp({email,options:{emailRedirectTo:window.location.origin}});$('#sendMagicLinkBtn').disabled=false;if(error){toast(error.message);return}track('leptigo_magic_link_requested');$('#authNote').textContent='Magic link sent. Check your email and open it on this device.';}
+async function signOut(){track('leptigo_signed_out');await supabase?.auth.signOut();try{analytics?.reset()}catch{}toast('Signed out');navigate('feed')}
 
 function bindUI(){
   $('.brand').addEventListener('click',e=>{e.preventDefault();navigate('feed')});
@@ -620,7 +632,7 @@ function bindUI(){
   $('#surpriseBtn').addEventListener('click',()=>{const v=pick(samples);$('#contextInput').value=v;$('#charCount').textContent=`${v.length} / 280`;renderMeaning(analyse(v))});$('#clearDefineBtn').addEventListener('click',()=>{$('#contextInput').value='';$('#charCount').textContent='0 / 280';$('#meaningResult').classList.add('hidden');currentMeaning=null});
   $('#publishBtn').addEventListener('click',publishCurrent);$('#saveBtn').addEventListener('click',privateSave);$('#copyBtn').addEventListener('click',async()=>{if(!currentMeaning)return;await navigator.clipboard?.writeText(`leptigo (${currentMeaning.part}): ${currentMeaning.definition}\n${currentMeaning.context}`);toast('Copied')});
   $('#feedList').addEventListener('click',e=>{const v=e.target.closest('[data-vote]');if(v)voteMeaning(v.dataset.vote);const c=e.target.closest('[data-copy]');if(c){const m=meanings.find(x=>x.id===c.dataset.copy);navigator.clipboard?.writeText(`leptigo: ${m?.definition||''}`);toast('Meaning copied')}});$('#refreshFeed').addEventListener('click',async()=>{if(configured)await hydrate();else{meanings.sort(()=>Math.random()-.5);renderFeed()}});
-  $('#dailySubmit').addEventListener('click',submitDaily);$('#dailyEntries').addEventListener('click',e=>{const b=e.target.closest('[data-daily-vote]');if(b)voteDaily(b.dataset.dailyVote)});$('#battleArena').addEventListener('click',e=>{const c=e.target.closest('[data-battle]');if(c)battleVote(c.dataset.battle)});$('#nextBattle').addEventListener('click',createBattle);
+  $('#dailySubmit').addEventListener('click',submitDaily);$('#dailyEntries').addEventListener('click',e=>{const b=e.target.closest('[data-daily-vote]');if(b)voteDaily(b.dataset.dailyVote)});$('#battleArena').addEventListener('click',e=>{const c=e.target.closest('[data-battle]');if(c)battleVote(c.dataset.battle)});$('#nextBattle').addEventListener('click',()=>{track('leptigo_battle_skip');createBattle()});
   $('#dictionarySearch').addEventListener('input',renderDictionary);$('#dictionarySort').addEventListener('change',renderDictionary);
   $('#openAuthBtn').addEventListener('click',openAuth);$('#closeAuthBtn').addEventListener('click',closeAuth);$('#authModal').addEventListener('click',e=>{if(e.target===$('#authModal'))closeAuth()});$('#sendMagicLinkBtn').addEventListener('click',sendMagicLink);$('#authEmail').addEventListener('keydown',e=>{if(e.key==='Enter')sendMagicLink()});$('#signOutBtn').addEventListener('click',signOut);
   $('#saveUsernameBtn').addEventListener('click',claimUsername);
