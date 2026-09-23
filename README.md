@@ -1,53 +1,46 @@
-# Leptigo v2
+# Leptigo
 
-**One word. Infinite meanings. Now shared.**
+> **It means what you mean.**
 
-Leptigo v2 upgrades the original local prototype into a real multi-user app backed by Supabase.
+**One word. Infinite meanings. The internet decides what survives.**
 
-## What v2 adds
+🌍 **Live:** https://leptigo.co.uk
 
-- public shared feed
-- passwordless email authentication
-- real user profiles and LP reputation
-- globally persisted meanings
-- one-vote-per-user context voting
-- Daily Leptigo shared across users
-- shared Daily voting
-- living global dictionary
-- local private saves remain private to the device
-- secure Row Level Security policies
-- Vercel-ready static deployment
+Leptigo is a social language experiment built around a single word with no fixed definition.
 
-## Supabase setup
+Use **leptigo** in context. The app interprets what you meant. Unleash a meaning, vote on other people's interpretations, answer the Daily Leptigo and throw definitions into semantic combat.
 
-1. Create a Supabase project.
-2. Open **SQL Editor** and run `supabase/schema.sql` in full.
-3. Go to **Project Settings → API**.
-4. Copy the Project URL and anon/publishable key into `supabase-config.js`.
-5. In **Authentication → URL Configuration**, set:
-   - Site URL: `https://leptigo.vercel.app`
-   - Redirect URL: `https://leptigo.vercel.app/**`
-6. Commit and push to `main`. Vercel will redeploy automatically.
+There is no official meaning.
 
-The anon key is intentionally public. It is safe in the browser because database access is controlled by the RLS policies in `supabase/schema.sql`. Never put the Supabase service-role key in this repository.
+That is the point.
 
-## Local test
+## What you can do
 
-```bash
-python3 -m http.server 8080
-```
+- **Define** Leptigo from context
+- **Unleash** meanings into the shared feed
+- **Vote** on interpretations that feel right
+- play **Daily Leptigo**
+- settle arguments in **Leptigo Battle**
+- watch the **living dictionary** mutate
+- earn **LP** for participating
+- use Leptigo without an account and sync identity later
+- share Leptigo and spread the problem
 
-Then open `http://localhost:8080`.
+## The rule
 
-For local magic-link auth, add `http://localhost:8080/**` as an additional Supabase redirect URL.
+**There is no wrong meaning. Only insufficient context.**
 
-## Next
+## Stack
 
-- AI meaning inference through a server-side endpoint
-- profile editing and custom handles
-- permanent `/m/:id` share pages
-- comments/remixes
-- global Battle scoring
-- moderation/reporting
-- leaderboards and notifications
-- analytics and rate limiting
+Leptigo is intentionally lightweight:
+
+- static frontend deployed on Vercel
+- Supabase for global identity, data and realtime
+- PostHog for product analytics
+- local-first participation so the experience still works without signing in
+
+## Contributing
+
+The experiment is live and evolving. Issues and ideas are welcome.
+
+If something is spectacularly broken in a way that makes you question whether computers were a mistake, it may already be leptigo.
