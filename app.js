@@ -24,11 +24,11 @@ const seedMeanings = [
 ];
 
 const seedDailyEntries = [
-  {id:'dailyseed1',seed:true,author:'Maya',definition:'when five minutes becomes a calendar invite',vote_count:42,created_at:'2026-09-23T06:12:00Z'},
-  {id:'dailyseed2',seed:true,author:'Callum',definition:'corporate time dilation',vote_count:37,created_at:'2026-09-23T06:19:00Z'},
-  {id:'dailyseed3',seed:true,author:'Priya',definition:'a meeting that has already lied to you before it starts',vote_count:31,created_at:'2026-09-23T06:33:00Z'},
-  {id:'dailyseed4',seed:true,author:'Nadia',definition:'five minutes, but in manager units',vote_count:28,created_at:'2026-09-23T06:47:00Z'},
-  {id:'dailyseed5',seed:true,author:'Tom',definition:'the administrative equivalent of opening a cursed object',vote_count:21,created_at:'2026-09-23T07:02:00Z'}
+  {id:'dailyseed1',seed:true,author:'Maya',definition:'a bug achieving reincarnation',vote_count:42,created_at:'2026-09-23T06:12:00Z'},
+  {id:'dailyseed2',seed:true,author:'Callum',definition:'yesterday’s fix returning with new lore',vote_count:37,created_at:'2026-09-23T06:19:00Z'},
+  {id:'dailyseed3',seed:true,author:'Priya',definition:'software discovering a fresh and deeply personal way to fail',vote_count:31,created_at:'2026-09-23T06:33:00Z'},
+  {id:'dailyseed4',seed:true,author:'Nadia',definition:'the sequel nobody approved',vote_count:28,created_at:'2026-09-23T06:47:00Z'},
+  {id:'dailyseed5',seed:true,author:'Tom',definition:'when the bug reads the patch notes and adapts',vote_count:21,created_at:'2026-09-23T07:02:00Z'}
 ]
 
 const samples = [
@@ -103,10 +103,6 @@ async function init(){
 }
 
 async function hydrate(){
-  const seedVotes=new Set(JSON.parse(localStorage.getItem('leptigo_seed_votes')||'[]'));
-  const seedDailyVotes=new Set(JSON.parse(localStorage.getItem('leptigo_seed_daily_votes')||'[]'));
-  seedVotes.forEach(id=>votedMeaningIds.add(id));
-  seedDailyVotes.forEach(id=>dailyVoteIds.add(id));
   try{
     if(session){
       const {data:p,error}=await supabase.from('profiles').select('*').eq('id',session.user.id).single();
@@ -129,6 +125,10 @@ async function hydrate(){
     const message = err?.message || err?.details || String(err);
     banner(`Database error · ${code}${message}`);
   }
+  const localSeedVotes=new Set(JSON.parse(localStorage.getItem('leptigo_seed_votes')||'[]'));
+  const localSeedDailyVotes=new Set(JSON.parse(localStorage.getItem('leptigo_seed_daily_votes')||'[]'));
+  localSeedVotes.forEach(id=>votedMeaningIds.add(id));
+  localSeedDailyVotes.forEach(id=>dailyVoteIds.add(id));
   renderAll();
 }
 
