@@ -59,6 +59,35 @@ let realMeaningCount = 0;
 let realtimeChannel = null;
 let realtimeRefreshTimer = null;
 let localPlayer = loadLocalPlayer();
+let analytics = null;
+let analyticsQueue = [];
+
+const POSTHOG_TOKEN='phc_qkaxaS9H4372eNGZEDpG9766HjkQhnmmwpqropY4dgoZ';
+const POSTHOG_HOST='https://us.i.posthog.com';
+
+function analyticsContext(){
+  return {signed_in:!!session,lp:totalRep(),app:'leptigo',host:location.hostname};
+}
+function track(event,properties={}){
+  const payload={...analyticsContext(),...properties};
+  if(analytics){try{analytics.capture(event,payload)}catch(err){console.warn('Leptigo analytics capture failed',err)}}
+  else{analyticsQueue.push([event,payload]);if(analyticsQueue.length>100)analyticsQueue.shift();}
+}
+function syncAnalyticsIdentity(){
+  if(!analytics || !session?.user?.id)return;
+  try{analytics.identify(session.user.id,profile?.username_set?{username:profile.username}:undefined)}catch(err){console.warn('Leptigo analytics identify failed',err)}
+}
+async function initAnalytics(){
+  try{
+    const mod=await import('https://esm.sh/posthog-js');
+    analytics=mod.default;
+    analytics.init(POSTHOG_TOKEN,{api_host:POSTHOG_HOST,autocapture:true,capture_pageview:true,capture_pageleave:true,person_profiles:'identified_only',persistence:'memory'});
+    analytics.register({product:'leptigo',domain:location.hostname});
+    syncAnalyticsIdentity();
+    const queued=analyticsQueue.splice(0);
+    queued.forEach(([event,properties])=>analytics.capture(event,properties));
+  }catch(err){console.warn('Leptigo analytics unavailable',err);analytics=null}
+}
 
 function safeJson(key,fallback){
   try{return JSON.parse(localStorage.getItem(key)||'null') ?? fallback}catch{return fallback}
@@ -201,6 +230,7 @@ async function hydrate(){
     const message = err?.message || err?.details || String(err);
     banner(`Database error · ${code}${message}`);
   }
+  syncAnalyticsIdentity();
   renderAll();
 }
 
@@ -281,7 +311,12 @@ function startRealtime(){
 
 function navigate(view){
   $$('.view').forEach(v=>v.classList.remove('active'));$$('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
-  $(`#view-${view}`)?.classList.add('active');history.replaceState(null,'',`#${view}`);if(view==='battle')createBattle();if(view==='profile')renderProfile();window.scrollTo({top:0,behavior:'smooth'});
+  $(`#view-${view}`)?.classList.add('active');
+  history.replaceState(null,'',`#${view}`);
+  track('leptigo_view',{view});
+  if(view==='battle')createBattle();
+  if(view==='profile')renderProfile();
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 function navigateFromHash(){const v=location.hash.slice(1);navigate(['feed','define','daily','battle','dictionary','profile'].includes(v)?v:'feed')}
 
@@ -297,7 +332,7 @@ function renderFeed(){
   const list=meanings;
   $('#feedList').innerHTML=list.map(x=>`<article class="feed-card"><div class="feed-author"><span class="avatar">${esc(initials(x.author))}</span><div><strong>${esc(x.author)}</strong><small>${ago(x.created_at)} · unleashed a meaning</small></div></div><p class="feed-context">“${esc(x.context)}”</p><p class="feed-definition">${esc(x.definition)}</p><div class="feed-meta"><span class="type-tag">${esc(x.part)}</span><span class="tone-tag">${esc(x.tone)}</span></div><div class="vote-row"><button class="vote-btn ${hasMeaningVote(x.id)?'voted':''}" data-vote="${x.id}">▲ <span>${x.vote_count||0}</span> context votes</button><button class="vote-btn" data-copy="${x.id}">Copy</button></div></article>`).join('') || '<div class="empty-state">No public meanings yet. You may be witnessing linguistic history.</div>';
 }
-function renderMeaning(m){currentMeaning=m;$('#meaningResult').classList.remove('hidden');$('#publishBtn').textContent='Unleash Leptigo';$('#resultPart').textContent=m.part;$('#resultDefinition').textContent=m.definition;$('#resultExample').textContent=`“${m.context}”`;$('#confidenceValue').textContent=`${m.confidence}%`;$('#confidenceRing').style.setProperty('--p',m.confidence);$('#toneRow').innerHTML=`<span class="tone-tag">tone: ${esc(m.tone)}</span><span class="type-tag">${esc(m.part)}</span>`;}
+function renderMeaning(m){currentMeaning=m;track('leptigo_interpreted',{part:m.part,tone:m.tone,confidence:m.confidence});$('#meaningResult').classList.remove('hidden');$('#publishBtn').textContent='Unleash Leptigo';$('#resultPart').textContent=m.part;$('#resultDefinition').textContent=m.definition;$('#resultExample').textContent=`“${m.context}”`;$('#confidenceValue').textContent=`${m.confidence}%`;$('#confidenceRing').style.setProperty('--p',m.confidence);$('#toneRow').innerHTML=`<span class="tone-tag">tone: ${esc(m.tone)}</span><span class="type-tag">${esc(m.part)}</span>`;}
 async function publishCurrent(){
   if(!currentMeaning)return;
 
@@ -594,5 +629,9 @@ function bindUI(){
   $('#usernameSignOutBtn').addEventListener('click',async()=>{await signOut();$('#usernameModal').classList.add('hidden')});
 }
 
+window.addEventListener('error',e=>track('leptigo_client_error',{kind:'error',message:String(e.message||'unknown').slice(0,180),line:e.lineno||0}));
+window.addEventListener('unhandledrejection',e=>track('leptigo_client_error',{kind:'promise',message:String(e.reason?.name||typeof e.reason).slice(0,80)}));
+
+initAnalytics();
 init();
 if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
