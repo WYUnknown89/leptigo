@@ -6,14 +6,28 @@
   <meta name="theme-color" content="#0d0f12" />
   <meta name="description" content="Leptigo. One word. Infinite meanings. The internet decides what it means." />
   <meta property="og:title" content="Leptigo — It means what you mean." />
-  <meta property="og:description" content="One word. Infinite meanings. Define it, vote on it, evolve it." />
+  <meta property="og:description" content="One word. Infinite meanings. Define it, vote on it, battle it, evolve it." />
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://leptigo.vercel.app" />
+  <meta property="og:site_name" content="Leptigo" />
+  <meta property="og:url" content="https://leptigo.co.uk/" />
+  <meta property="og:locale" content="en_GB" />
   <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Leptigo — It means what you mean." />
+  <meta name="twitter:description" content="One word. Infinite meanings. The internet decides what it means." />
+  <link rel="canonical" href="https://leptigo.co.uk/" />
   <title>Leptigo — It means what you mean.</title>
   <link rel="stylesheet" href="/styles.css" />
   <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <script type="application/ld+json">
+  {
+    "@context":"https://schema.org",
+    "@type":"WebSite",
+    "name":"Leptigo",
+    "url":"https://leptigo.co.uk/",
+    "description":"One word with no fixed meaning. Define it, vote on it, battle it and let the internet evolve it."
+  }
+  </script>
 </head>
 <body>
   <div class="noise"></div>
@@ -107,7 +121,7 @@
     <aside class="right-rail">
       <section class="rail-card trend-card"><div class="rail-title">Trending meanings</div><div id="trendingList"></div></section>
       <section class="rail-card"><div class="rail-title">Today in Leptigo</div><p class="big-number" id="globalMeaningCount">0</p><p class="muted">public meanings currently surviving.</p></section>
-      <section class="rail-card invite-card"><span>∞</span><div><strong>One word.<br>Infinite meanings.</strong><p>That is the entire problem.</p></div></section>
+      <button class="rail-card invite-card" id="shareLeptigo" type="button" aria-label="Share Leptigo"><span>∞</span><div><strong>Share Leptigo.<br>Spread the problem.</strong><p>One word. Infinite meanings.</p></div></button>
     </aside>
   </main>
 
