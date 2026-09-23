@@ -634,6 +634,13 @@ function bindUI(){
   $('#feedList').addEventListener('click',e=>{const v=e.target.closest('[data-vote]');if(v)voteMeaning(v.dataset.vote);const c=e.target.closest('[data-copy]');if(c){const m=meanings.find(x=>x.id===c.dataset.copy);navigator.clipboard?.writeText(`leptigo: ${m?.definition||''}`);toast('Meaning copied')}});$('#refreshFeed').addEventListener('click',async()=>{if(configured)await hydrate();else{meanings.sort(()=>Math.random()-.5);renderFeed()}});
   $('#dailySubmit').addEventListener('click',submitDaily);$('#dailyEntries').addEventListener('click',e=>{const b=e.target.closest('[data-daily-vote]');if(b)voteDaily(b.dataset.dailyVote)});$('#battleArena').addEventListener('click',e=>{const c=e.target.closest('[data-battle]');if(c)battleVote(c.dataset.battle)});$('#nextBattle').addEventListener('click',()=>{track('leptigo_battle_skip');createBattle()});
   $('#dictionarySearch').addEventListener('input',renderDictionary);$('#dictionarySort').addEventListener('change',renderDictionary);
+  $('#shareLeptigo').addEventListener('click',async()=>{
+    const share={title:'Leptigo — It means what you mean.',text:'One word. Infinite meanings. The internet decides what leptigo means.',url:'https://leptigo.co.uk/'};
+    track('leptigo_share');
+    if(navigator.share){try{await navigator.share(share);return}catch(err){if(err?.name==='AbortError')return}}
+    await navigator.clipboard?.writeText(share.url);
+    toast('Leptigo copied. Spread it.');
+  });
   $('#openAuthBtn').addEventListener('click',openAuth);$('#closeAuthBtn').addEventListener('click',closeAuth);$('#authModal').addEventListener('click',e=>{if(e.target===$('#authModal'))closeAuth()});$('#sendMagicLinkBtn').addEventListener('click',sendMagicLink);$('#authEmail').addEventListener('keydown',e=>{if(e.key==='Enter')sendMagicLink()});$('#signOutBtn').addEventListener('click',signOut);
   $('#saveUsernameBtn').addEventListener('click',claimUsername);
   $('#usernameInput').addEventListener('input',e=>{e.target.value=e.target.value.replace(/[^A-Za-z0-9_]/g,'').slice(0,24);$('#usernamePreview').textContent='@'+normaliseUsername(e.target.value||'username')});
