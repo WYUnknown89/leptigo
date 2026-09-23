@@ -259,7 +259,7 @@ async function battleVote(id){
   }
 
   battlePairKeys.add(key);
-  $('.battle-card').forEach(x=>x.classList.toggle('selected',x.dataset.battle===id));
+  $$('.battle-card').forEach(x=>x.classList.toggle('selected',x.dataset.battle===id));
   toast('+1 LP · global battle vote counted');
   await hydrate();
   setTimeout(createBattle,450);
