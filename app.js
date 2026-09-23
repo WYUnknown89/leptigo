@@ -273,20 +273,38 @@ function createBattle(){
   if(session?.user?.id)pool=pool.filter(x=>!x.user_id||x.user_id!==session.user.id);
   if(pool.length<2){$('#battleArena').innerHTML='<div class="empty-state">The Leptiverse needs more meanings before language can fight itself.</div>';return}
 
-  let a=null,b=null,key='';
-  for(let i=0;i<30;i++){
-    const first=pick(pool),second=pick(pool);
-    if(first.id===second.id)continue;
-    const candidate=battlePairKey(first.id,second.id);
-    if(!battlePairKeys.has(candidate)){a=first;b=second;key=candidate;break}
+  const localKey='leptigo_seed_battles';
+  let localSynthetic=new Set(JSON.parse(localStorage.getItem(localKey)||'[]'));
+  const realPairs=new Set([...battlePairKeys].filter(k=>!k.includes('seed')));
+
+  const availablePairs=[];
+  for(let i=0;i<pool.length;i++){
+    for(let j=i+1;j<pool.length;j++){
+      const a=pool[i],b=pool[j],key=battlePairKey(a.id,b.id);
+      const synthetic=a.seed||b.seed;
+      if(synthetic ? !localSynthetic.has(key) : !realPairs.has(key)){
+        availablePairs.push([a,b]);
+      }
+    }
   }
 
-  if(!a||!b){
-    a=pick(pool);
-    do{b=pick(pool)}while(b.id===a.id);
+  if(!availablePairs.length){
+    localStorage.removeItem(localKey);
+    localSynthetic=new Set();
+    for(let i=0;i<pool.length;i++){
+      for(let j=i+1;j<pool.length;j++){
+        const a=pool[i],b=pool[j];
+        if(a.seed||b.seed)availablePairs.push([a,b]);
+      }
+    }
   }
 
-  currentBattle=[a,b];
+  if(!availablePairs.length){
+    $('#battleArena').innerHTML='<div class="empty-state">You have battled every available matchup. More chaos required.</div>';
+    return;
+  }
+
+  currentBattle=pick(availablePairs);
   $('#battleArena').innerHTML=currentBattle.map((x,i)=>`<article class="battle-card" data-battle="${x.id}"><span class="battle-letter">${i?'B':'A'}</span><h3>leptigo</h3><p>${esc(x.definition)}</p><footer>${esc(x.author)} · ⚔ ${x.battle_score||0} battle wins</footer></article>`).join('');
 }
 
@@ -303,7 +321,6 @@ async function battleVote(id){
     if(voted.has(key)){toast('You already voted in this matchup');createBattle();return}
     voted.add(key);
     localStorage.setItem(localKey,JSON.stringify([...voted]));
-    battlePairKeys.add(key);
     const winner=meanings.find(x=>x.id===id);
     if(winner)winner.battle_score=(winner.battle_score||0)+1;
     $('.battle-card').forEach(x=>x.classList.toggle('selected',x.dataset.battle===id));
