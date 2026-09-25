@@ -59,34 +59,73 @@ let realMeaningCount = 0;
 let realtimeChannel = null;
 let realtimeRefreshTimer = null;
 let localPlayer = loadLocalPlayer();
-let analytics = null;
-let analyticsQueue = [];
+let analyticsEnabled = true;
 
-const POSTHOG_TOKEN='phc_qkaxaS9H4372eNGZEDpG9766HjkQhnmmwpqropY4dgoZ';
-const POSTHOG_HOST='https://us.i.posthog.com';
+const ANALYTICS_ENDPOINT='/api/analytics';
+
+function analyticsAnonymousId(){
+  const key='leptigo_analytics_id';
+  let id=localStorage.getItem(key);
+  if(!id){
+    id=globalThis.crypto?.randomUUID?.() || ('anon-'+Date.now()+'-'+Math.random().toString(36).slice(2));
+    localStorage.setItem(key,id);
+  }
+  return id;
+}
+
+function analyticsSessionId(){
+  const key='leptigo_analytics_session';
+  let id=sessionStorage.getItem(key);
+  if(!id){
+    id=globalThis.crypto?.randomUUID?.() || ('session-'+Date.now()+'-'+Math.random().toString(36).slice(2));
+    sessionStorage.setItem(key,id);
+  }
+  return id;
+}
+
+function analyticsDistinctId(){
+  return session?.user?.id || analyticsAnonymousId();
+}
 
 function analyticsContext(){
-  return {signed_in:!!session,lp:totalRep(),app:'leptigo',host:location.hostname};
+  return {
+    signed_in:!!session,
+    lp:totalRep(),
+    app:'leptigo',
+    host:location.hostname,
+    $current_url:location.href,
+    $pathname:location.pathname,
+    $referrer:document.referrer||undefined,
+    $process_person_profile:!!session
+  };
 }
+
 function track(event,properties={}){
-  const payload={...analyticsContext(),...properties};
-  if(analytics){try{analytics.capture(event,payload)}catch(err){console.warn('Leptigo analytics capture failed',err)}}
-  else{analyticsQueue.push([event,payload]);if(analyticsQueue.length>100)analyticsQueue.shift();}
-}
-function syncAnalyticsIdentity(){
-  if(!analytics || !session?.user?.id)return;
-  try{analytics.identify(session.user.id,profile?.username_set?{username:profile.username}:undefined)}catch(err){console.warn('Leptigo analytics identify failed',err)}
-}
-async function initAnalytics(){
+  if(!analyticsEnabled)return;
+  const body={
+    event,
+    distinct_id:analyticsDistinctId(),
+    session_id:analyticsSessionId(),
+    properties:{...analyticsContext(),...properties}
+  };
   try{
-    const mod=await import('https://esm.sh/posthog-js');
-    analytics=mod.default;
-    analytics.init(POSTHOG_TOKEN,{api_host:POSTHOG_HOST,autocapture:true,capture_pageview:true,capture_pageleave:true,person_profiles:'identified_only',persistence:'memory'});
-    analytics.register({product:'leptigo',domain:location.hostname});
-    syncAnalyticsIdentity();
-    const queued=analyticsQueue.splice(0);
-    queued.forEach(([event,properties])=>analytics.capture(event,properties));
-  }catch(err){console.warn('Leptigo analytics unavailable',err);analytics=null}
+    fetch(ANALYTICS_ENDPOINT,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Leptigo-Analytics':'1'},
+      body:JSON.stringify(body),
+      keepalive:true
+    }).catch(err=>console.warn('Leptigo analytics delivery failed',err));
+  }catch(err){
+    console.warn('Leptigo analytics unavailable',err);
+  }
+}
+
+function syncAnalyticsIdentity(){
+  // track() reads the current Supabase user ID dynamically.
+}
+
+function initAnalytics(){
+  track('$pageview',{view:location.hash.slice(1)||'feed'});
 }
 
 function safeJson(key,fallback){
@@ -623,7 +662,7 @@ async function claimUsername(){
 function openAuth(){if(!configured){toast('Supabase needs configuring first');return}$('#authModal').classList.remove('hidden');setTimeout(()=>$('#authEmail').focus(),50)}
 function closeAuth(){$('#authModal').classList.add('hidden')}
 async function sendMagicLink(){const email=$('#authEmail').value.trim();if(!email||!email.includes('@')){toast('Enter a valid email');return}$('#sendMagicLinkBtn').disabled=true;const {error}=await supabase.auth.signInWithOtp({email,options:{emailRedirectTo:window.location.origin}});$('#sendMagicLinkBtn').disabled=false;if(error){toast(error.message);return}track('leptigo_magic_link_requested');$('#authNote').textContent='Magic link sent. Check your email and open it on this device.';}
-async function signOut(){track('leptigo_signed_out');await supabase?.auth.signOut();try{analytics?.reset()}catch{}toast('Signed out');navigate('feed')}
+async function signOut(){track('leptigo_signed_out');await supabase?.auth.signOut();toast('Signed out');navigate('feed')}
 
 function bindUI(){
   $('.brand').addEventListener('click',e=>{e.preventDefault();navigate('feed')});
