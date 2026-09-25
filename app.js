@@ -61,7 +61,7 @@ let realtimeRefreshTimer = null;
 let localPlayer = loadLocalPlayer();
 let analyticsEnabled = true;
 
-const ANALYTICS_ENDPOINT='/api/analytics';
+const ANALYTICS_ENDPOINT='/api/e';
 
 function analyticsAnonymousId(){
   const key='leptigo_analytics_id';
