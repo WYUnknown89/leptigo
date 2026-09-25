@@ -1,7 +1,5 @@
 const POSTHOG_TOKEN='phc_qkaxaS9H4372eNGZEDpG9766HjkQhnmmwpqropY4dgoZ';
 const INGEST_HOSTS=['https://us.i.posthog.com','https://eu.i.posthog.com'];
-const PROBE='leptigo-probe-20260925-v1';
-
 function originAllowed(origin=''){
   if(!origin)return true;
   if(origin==='https://leptigo.co.uk' || origin==='https://www.leptigo.co.uk')return true;
@@ -48,15 +46,6 @@ export default async function handler(req,res){
   res.setHeader('Cache-Control','no-store');
 
   if(req.method==='GET'){
-    if(req.query?.probe===PROBE){
-      const result=await forwardEvent({
-        event:'leptigo_analytics_probe',
-        distinct_id:'leptigo-server-probe',
-        session_id:'00000000-0000-4000-8000-000000000001',
-        properties:{probe:true,host:'leptigo.co.uk',$process_person_profile:false}
-      },req);
-      return res.status(result.ok?200:502).json(result);
-    }
     return res.status(200).json({ok:true,service:'leptigo-analytics'});
   }
 
